@@ -2,10 +2,11 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap');
 
 :root {
   --font-mono: 'IBM Plex Mono', monospace;
+  --font-sans: 'IBM Plex Sans', sans-serif;
 }
 
 * {
@@ -13,101 +14,96 @@
 }
 
 body {
-  font-family: var(--font-mono);
-  background: #000;
-  color: #fff;
-  line-height: 1.4;
+  font-family: var(--font-sans);
+  background: #fafafa;
+  color: #111;
+  line-height: 1.5;
+  font-size: 14px;
 }
 
-/* Minimal scrollbar */
+/* Scrollbar */
 ::-webkit-scrollbar {
-  width: 4px;
-  height: 4px;
+  width: 8px;
+  height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #000;
+  background: #f0f0f0;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #333;
+  background: #ccc;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #999;
 }
 
 /* Selection */
 ::selection {
-  background: #fff;
-  color: #000;
+  background: #111;
+  color: #fff;
 }
 
-/* Focus */
-*:focus {
-  outline: 1px solid #fff;
-  outline-offset: 2px;
-}
-
-/* Table */
+/* Tables */
 table {
   border-collapse: collapse;
   width: 100%;
 }
 
 th, td {
+  padding: 10px 12px;
   text-align: left;
-  padding: 8px 12px;
-  border-bottom: 1px solid #222;
+  border-bottom: 1px solid #e5e5e5;
 }
 
 th {
   font-weight: 600;
+  font-size: 11px;
   text-transform: uppercase;
-  font-size: 10px;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.03em;
   color: #666;
+  background: #f5f5f5;
+  position: sticky;
+  top: 0;
 }
 
 tr:hover td {
-  background: #111;
-}
-
-/* Links */
-a {
-  color: inherit;
-  text-decoration: underline;
-  text-underline-offset: 2px;
-}
-
-a:hover {
-  text-decoration: none;
+  background: #f9f9f9;
 }
 
 /* Inputs */
 input, select {
   font-family: inherit;
-  background: #000;
-  color: #fff;
-  border: 1px solid #333;
-  padding: 6px 10px;
-  font-size: 12px;
+  font-size: 13px;
+  background: #fff;
+  color: #111;
+  border: 1px solid #ddd;
+  padding: 8px 12px;
+  border-radius: 4px;
 }
 
 input:focus, select:focus {
-  border-color: #fff;
+  outline: none;
+  border-color: #111;
 }
 
 /* Buttons */
 button {
   font-family: inherit;
-  background: #fff;
-  color: #000;
+  font-size: 13px;
+  background: #111;
+  color: #fff;
   border: none;
-  padding: 6px 12px;
-  font-size: 12px;
+  padding: 8px 16px;
+  border-radius: 4px;
   cursor: pointer;
-  font-weight: 600;
+  font-weight: 500;
 }
 
 button:hover {
-  background: #ccc;
+  background: #333;
 }
 
 button:disabled {
@@ -115,11 +111,22 @@ button:disabled {
   cursor: not-allowed;
 }
 
+button.secondary {
+  background: #fff;
+  color: #111;
+  border: 1px solid #ddd;
+}
+
+button.secondary:hover {
+  background: #f5f5f5;
+}
+
 /* Skeleton loading */
 .skeleton {
-  background: linear-gradient(90deg, #111 25%, #222 50%, #111 75%);
+  background: linear-gradient(90deg, #f0f0f0 25%, #e5e5e5 50%, #f0f0f0 75%);
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
+  border-radius: 4px;
 }
 
 @keyframes shimmer {
@@ -127,15 +134,52 @@ button:disabled {
   100% { background-position: -200% 0; }
 }
 
-/* Positive/Negative values */
-.positive { color: #00ff00; }
-.negative { color: #ff0000; }
+/* Monospace for numbers */
+.mono {
+  font-family: var(--font-mono);
+}
 
 /* Muted text */
-.muted { color: #666; }
+.muted {
+  color: #888;
+}
 
-/* Chart container */
-.chart-container {
-  background: #0a0a0a;
-  border: 1px solid #222;
+/* Cards */
+.card {
+  background: #fff;
+  border: 1px solid #e5e5e5;
+  border-radius: 6px;
+}
+
+/* Modal overlay */
+.modal-overlay {
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(2px);
+}
+
+/* Tag styles */
+.tag {
+  display: inline-block;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 500;
+  border-radius: 3px;
+  background: #f0f0f0;
+  color: #555;
+}
+
+/* P/E color coding - subtle */
+.pe-cheap { color: #2d5016; }
+.pe-fair { color: #111; }
+.pe-expensive { color: #7c2d12; }
+
+/* Link styles */
+a {
+  color: #111;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+a:hover {
+  text-decoration: none;
 }
