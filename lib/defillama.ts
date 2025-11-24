@@ -1,136 +1,216 @@
-// DefiLlama API integration for fees, revenue, and buyback data
+// DefiLlama API integration for ACTUAL buyback/holders revenue data
 
 const DEFILLAMA_API = 'https://api.llama.fi';
 
-// Protocols with known buyback mechanisms and their DefiLlama slugs
-export const BUYBACK_PROTOCOLS = [
-  {
-    slug: 'hyperliquid',
+// Protocols known to have buyback/distribution mechanisms
+// We fetch dailyHoldersRevenue which is the ACTUAL amount going to token holders
+export const PROTOCOL_CONFIG: Record<string, {
+  name: string;
+  symbol: string;
+  geckoId: string;
+  mechanism: string;
+  description: string;
+}> = {
+  'hyperliquid': {
     name: 'Hyperliquid',
     symbol: 'HYPE',
     geckoId: 'hyperliquid',
-    mechanism: 'buyback-burn',
-    buybackSource: 'holdersRevenue', // 99% of fees go to buying HYPE
-    description: '99% of perp trading fees used to buy back HYPE tokens',
+    mechanism: 'buyback',
+    description: '99% of perp fees → HYPE buybacks via Assistance Fund',
   },
-  {
-    slug: 'gmx',
-    name: 'GMX',
-    symbol: 'GMX',
-    geckoId: 'gmx',
-    mechanism: 'buyback-distribute',
-    buybackSource: 'holdersRevenue', // 30% to GMX stakers
-    description: '30% of trading fees distributed to GMX stakers',
+  'pump.fun': {
+    name: 'pump.fun',
+    symbol: 'PUMP',
+    geckoId: 'pump-fun',
+    mechanism: 'buyback',
+    description: 'Protocol revenue used for PUMP token buybacks',
   },
-  {
-    slug: 'aave',
+  'aerodrome': {
+    name: 'Aerodrome',
+    symbol: 'AERO',
+    geckoId: 'aerodrome-finance',
+    mechanism: 'distribute',
+    description: 'Trading fees distributed to veAERO lockers',
+  },
+  'curve-dex': {
+    name: 'Curve',
+    symbol: 'CRV',
+    geckoId: 'curve-dao-token',
+    mechanism: 'distribute',
+    description: 'Trading fees distributed to veCRV holders',
+  },
+  'aave': {
     name: 'Aave',
     symbol: 'AAVE',
     geckoId: 'aave',
-    mechanism: 'buyback-distribute',
-    buybackSource: 'revenue', // DAO revenue used for buybacks
-    description: 'DAO treasury revenue used for token buybacks',
-  },
-  {
-    slug: 'maker',
-    name: 'Maker (Sky)',
-    symbol: 'MKR',
-    geckoId: 'maker',
-    mechanism: 'buyback-burn',
-    buybackSource: 'revenue', // Surplus used for Smart Burn Engine
-    description: 'Protocol surplus used to buy and burn MKR via Smart Burn Engine',
-  },
-  {
-    slug: 'lido',
-    name: 'Lido',
-    symbol: 'LDO',
-    geckoId: 'lido-dao',
     mechanism: 'buyback',
-    buybackSource: 'revenue',
-    description: 'Staking fees used for LDO buybacks',
+    description: 'Protocol revenue used for AAVE buybacks',
   },
-  {
-    slug: 'pancakeswap',
-    name: 'PancakeSwap',
-    symbol: 'CAKE',
-    geckoId: 'pancakeswap-token',
-    mechanism: 'buyback-burn',
-    buybackSource: 'revenue',
-    description: 'Trading fees used to buy and burn CAKE weekly',
+  'ether.fi': {
+    name: 'ether.fi',
+    symbol: 'ETHFI',
+    geckoId: 'ether-fi',
+    mechanism: 'distribute',
+    description: 'Restaking revenue distributed to token holders',
   },
-  {
-    slug: 'jupiter-aggregator',
-    name: 'Jupiter',
-    symbol: 'JUP',
-    geckoId: 'jupiter-exchange-solana',
-    mechanism: 'buyback',
-    buybackSource: 'revenue',
-    description: 'Aggregator fees used for JUP buybacks',
+  'pendle': {
+    name: 'Pendle',
+    symbol: 'PENDLE',
+    geckoId: 'pendle',
+    mechanism: 'distribute',
+    description: 'Protocol fees distributed to vePENDLE holders',
   },
-  {
-    slug: 'raydium',
+  'raydium': {
     name: 'Raydium',
     symbol: 'RAY',
     geckoId: 'raydium',
     mechanism: 'buyback-burn',
-    buybackSource: 'revenue',
-    description: '12% of trading fees used for RAY buyback and burn',
+    description: '12% of trading fees → RAY buyback and burn',
   },
-  {
-    slug: 'dydx',
+  'gmx': {
+    name: 'GMX',
+    symbol: 'GMX',
+    geckoId: 'gmx',
+    mechanism: 'distribute',
+    description: '30% of trading fees distributed to GMX stakers',
+  },
+  'dydx': {
     name: 'dYdX',
     symbol: 'DYDX',
     geckoId: 'dydx-chain',
-    mechanism: 'buyback-distribute',
-    buybackSource: 'holdersRevenue',
+    mechanism: 'distribute',
     description: 'Trading fees distributed to DYDX stakers',
   },
-  {
-    slug: 'synthetix',
-    name: 'Synthetix',
-    symbol: 'SNX',
-    geckoId: 'havven',
+  'sushiswap': {
+    name: 'SushiSwap',
+    symbol: 'SUSHI',
+    geckoId: 'sushi',
+    mechanism: 'distribute',
+    description: 'Trading fees distributed to xSUSHI holders',
+  },
+  'pancakeswap-amm': {
+    name: 'PancakeSwap',
+    symbol: 'CAKE',
+    geckoId: 'pancakeswap-token',
     mechanism: 'buyback-burn',
-    buybackSource: 'revenue',
-    description: 'Protocol fees used for SNX buyback and burn',
+    description: 'Trading fees used to buy and burn CAKE',
   },
-  {
-    slug: 'pendle',
-    name: 'Pendle',
-    symbol: 'PENDLE',
-    geckoId: 'pendle',
-    mechanism: 'buyback-distribute',
-    buybackSource: 'revenue',
-    description: 'Protocol fees distributed to vePENDLE holders',
+  'quickswap-dex': {
+    name: 'QuickSwap',
+    symbol: 'QUICK',
+    geckoId: 'quickswap',
+    mechanism: 'distribute',
+    description: 'Trading fees distributed to QUICK stakers',
   },
-  {
-    slug: 'banana-gun-trading',
+  'orca': {
+    name: 'Orca',
+    symbol: 'ORCA',
+    geckoId: 'orca',
+    mechanism: 'distribute',
+    description: 'Trading fees distributed to ORCA stakers',
+  },
+  'velodrome-v2': {
+    name: 'Velodrome',
+    symbol: 'VELO',
+    geckoId: 'velodrome-finance',
+    mechanism: 'distribute',
+    description: 'Trading fees distributed to veVELO lockers',
+  },
+  'camelot-v3': {
+    name: 'Camelot',
+    symbol: 'GRAIL',
+    geckoId: 'camelot-token',
+    mechanism: 'distribute',
+    description: 'Trading fees distributed to xGRAIL holders',
+  },
+  'thena-v2': {
+    name: 'Thena',
+    symbol: 'THE',
+    geckoId: 'thena',
+    mechanism: 'distribute',
+    description: 'Trading fees distributed to veTHE lockers',
+  },
+  'trader-joe': {
+    name: 'Trader Joe',
+    symbol: 'JOE',
+    geckoId: 'joe',
+    mechanism: 'distribute',
+    description: 'Trading fees distributed to sJOE stakers',
+  },
+  'balancer-v2': {
+    name: 'Balancer',
+    symbol: 'BAL',
+    geckoId: 'balancer',
+    mechanism: 'distribute',
+    description: 'Protocol fees distributed to veBAL holders',
+  },
+  // Trading bots - these generate revenue, some do buybacks
+  'banana-gun-trading': {
     name: 'Banana Gun',
     symbol: 'BANANA',
     geckoId: 'banana-gun',
     mechanism: 'buyback-burn',
-    buybackSource: 'revenue',
-    description: '40% of bot revenue used for BANANA buyback and burn',
+    description: '40% of bot revenue → BANANA buyback and burn',
   },
-  {
-    slug: 'aerodrome',
-    name: 'Aerodrome',
-    symbol: 'AERO',
-    geckoId: 'aerodrome-finance',
-    mechanism: 'buyback-distribute',
-    buybackSource: 'revenue',
-    description: 'Trading fees distributed to veAERO holders',
+  'maestro': {
+    name: 'Maestro',
+    symbol: 'MBS', 
+    geckoId: 'maestro',
+    mechanism: 'buyback',
+    description: 'Trading bot revenue used for buybacks',
   },
-  {
-    slug: 'convex',
+  'unibot': {
+    name: 'Unibot',
+    symbol: 'UNIBOT',
+    geckoId: 'unibot',
+    mechanism: 'distribute',
+    description: 'Trading fees distributed to UNIBOT holders',
+  },
+  // LSTs and staking
+  'lido': {
+    name: 'Lido',
+    symbol: 'LDO',
+    geckoId: 'lido-dao',
+    mechanism: 'buyback',
+    description: 'Staking protocol revenue for potential buybacks',
+  },
+  'rocketpool': {
+    name: 'Rocket Pool',
+    symbol: 'RPL',
+    geckoId: 'rocket-pool',
+    mechanism: 'distribute',
+    description: 'Protocol fees distributed to RPL stakers',
+  },
+  // Additional major protocols
+  'maker': {
+    name: 'Maker (Sky)',
+    symbol: 'MKR',
+    geckoId: 'maker',
+    mechanism: 'buyback-burn',
+    description: 'Smart Burn Engine uses surplus to buy and burn MKR',
+  },
+  'frax': {
+    name: 'Frax',
+    symbol: 'FXS',
+    geckoId: 'frax-share',
+    mechanism: 'distribute',
+    description: 'Protocol revenue distributed to veFXS holders',
+  },
+  'convex': {
     name: 'Convex',
     symbol: 'CVX',
     geckoId: 'convex-finance',
-    mechanism: 'buyback-distribute',
-    buybackSource: 'holdersRevenue',
-    description: 'Platform fees distributed to CVX lockers',
+    mechanism: 'distribute',
+    description: 'CRV bribes distributed to vlCVX holders',
   },
-];
+  'synthetix': {
+    name: 'Synthetix',
+    symbol: 'SNX',
+    geckoId: 'havven',
+    mechanism: 'buyback-burn',
+    description: 'Protocol fees used for SNX buyback and burn',
+  },
+};
 
 export interface DailyDataPoint {
   timestamp: number;
@@ -138,93 +218,100 @@ export interface DailyDataPoint {
   value: number;
 }
 
-export interface ProtocolFeeData {
+export interface ProtocolBuybackData {
   slug: string;
   name: string;
   symbol: string;
+  mechanism: string;
+  description: string;
+  // Price data from CoinGecko
+  price: number;
+  marketCap: number;
+  priceChange24h: number;
+  // Buyback data from DefiLlama
+  holdersRevenue24h: number;
+  holdersRevenue7d: number;
+  holdersRevenue30d: number;
+  holdersRevenueAllTime: number;
+  // Also fetch total fees for comparison
+  totalFees24h: number;
+  totalFees30d: number;
+  // Calculated
+  buybackRate: number; // Annualized as % of mcap
+  // Historical chart
+  dailyChart: DailyDataPoint[];
+}
+
+// Fetch holders revenue (actual buyback amount) for a protocol
+async function fetchHoldersRevenue(slug: string): Promise<{
   total24h: number | null;
   total7d: number | null;
   total30d: number | null;
   totalAllTime: number | null;
-  dailyChart: DailyDataPoint[];
-  holdersRevenue24h: number | null;
-  holdersRevenue30d: number | null;
-  methodology: string | null;
-}
-
-export interface MarketCapData {
-  [geckoId: string]: {
-    usd: number;
-    usd_market_cap: number;
-    usd_24h_change: number;
-  };
-}
-
-// Fetch fee/revenue summary for a protocol
-export async function fetchProtocolFees(slug: string, dataType: string = 'dailyRevenue'): Promise<any> {
+  chart: DailyDataPoint[];
+} | null> {
   try {
-    const response = await fetch(`${DEFILLAMA_API}/summary/fees/${slug}?dataType=${dataType}`);
+    const response = await fetch(
+      `${DEFILLAMA_API}/summary/fees/${slug}?dataType=dailyHoldersRevenue`
+    );
     if (!response.ok) return null;
-    return response.json();
+    
+    const data = await response.json();
+    
+    const chart: DailyDataPoint[] = [];
+    const rawChart = data.totalDataChart || [];
+    for (const [timestamp, value] of rawChart.slice(-90)) {
+      chart.push({
+        timestamp,
+        date: new Date(timestamp * 1000).toISOString().split('T')[0],
+        value: value || 0,
+      });
+    }
+    
+    return {
+      total24h: data.total24h ?? null,
+      total7d: data.total7d ?? null,
+      total30d: data.total30d ?? null,
+      totalAllTime: data.totalAllTime ?? null,
+      chart,
+    };
   } catch (error) {
-    console.error(`Failed to fetch fees for ${slug}:`, error);
+    console.error(`Failed to fetch holders revenue for ${slug}:`, error);
     return null;
   }
 }
 
-// Fetch all protocol data in parallel
-export async function fetchAllProtocolData(): Promise<ProtocolFeeData[]> {
-  const results: ProtocolFeeData[] = [];
-
-  await Promise.all(
-    BUYBACK_PROTOCOLS.map(async (protocol) => {
-      try {
-        // Fetch revenue data
-        const revenueData = await fetchProtocolFees(protocol.slug, 'dailyRevenue');
-        
-        // Fetch holders revenue if that's the buyback source
-        let holdersData = null;
-        if (protocol.buybackSource === 'holdersRevenue') {
-          holdersData = await fetchProtocolFees(protocol.slug, 'dailyHoldersRevenue');
-        }
-
-        // Parse daily chart data
-        const chartData: DailyDataPoint[] = [];
-        const rawChart = revenueData?.totalDataChart || holdersData?.totalDataChart || [];
-        
-        for (const [timestamp, value] of rawChart.slice(-90)) { // Last 90 days
-          chartData.push({
-            timestamp,
-            date: new Date(timestamp * 1000).toISOString().split('T')[0],
-            value: value || 0,
-          });
-        }
-
-        results.push({
-          slug: protocol.slug,
-          name: protocol.name,
-          symbol: protocol.symbol,
-          total24h: holdersData?.total24h ?? revenueData?.total24h ?? null,
-          total7d: holdersData?.total7d ?? revenueData?.total7d ?? null,
-          total30d: holdersData?.total30d ?? revenueData?.total30d ?? null,
-          totalAllTime: holdersData?.totalAllTime ?? revenueData?.totalAllTime ?? null,
-          dailyChart: chartData,
-          holdersRevenue24h: holdersData?.total24h ?? null,
-          holdersRevenue30d: holdersData?.total30d ?? null,
-          methodology: revenueData?.methodology?.HoldersRevenue || revenueData?.methodology?.Revenue || null,
-        });
-      } catch (error) {
-        console.error(`Failed to process ${protocol.slug}:`, error);
-      }
-    })
-  );
-
-  return results.filter(r => r.total30d !== null && r.total30d > 0);
+// Fetch total fees for a protocol
+async function fetchTotalFees(slug: string): Promise<{
+  total24h: number | null;
+  total30d: number | null;
+} | null> {
+  try {
+    const response = await fetch(
+      `${DEFILLAMA_API}/summary/fees/${slug}?dataType=dailyFees`
+    );
+    if (!response.ok) return null;
+    
+    const data = await response.json();
+    return {
+      total24h: data.total24h ?? null,
+      total30d: data.total30d ?? null,
+    };
+  } catch (error) {
+    return null;
+  }
 }
 
 // Fetch market caps from CoinGecko
-export async function fetchMarketCaps(): Promise<MarketCapData> {
-  const geckoIds = BUYBACK_PROTOCOLS.map(p => p.geckoId).join(',');
+export async function fetchMarketCaps(): Promise<Record<string, {
+  usd: number;
+  usd_market_cap: number;
+  usd_24h_change: number;
+}>> {
+  const geckoIds = Object.values(PROTOCOL_CONFIG)
+    .map(p => p.geckoId)
+    .filter(Boolean)
+    .join(',');
   
   try {
     const response = await fetch(
@@ -238,64 +325,72 @@ export async function fetchMarketCaps(): Promise<MarketCapData> {
   }
 }
 
-// Combined data with buyback rates
-export interface ProtocolBuybackData {
-  slug: string;
-  name: string;
-  symbol: string;
-  mechanism: string;
-  description: string;
-  price: number;
-  marketCap: number;
-  priceChange24h: number;
-  buyback24h: number;
-  buyback7d: number;
-  buyback30d: number;
-  buybackAllTime: number;
-  buybackRate: number; // Annualized buyback as % of market cap
-  dailyChart: DailyDataPoint[];
+// Fetch all data
+export async function fetchAllBuybackData(): Promise<ProtocolBuybackData[]> {
+  const slugs = Object.keys(PROTOCOL_CONFIG);
+  
+  // Fetch market caps first
+  const marketCaps = await fetchMarketCaps();
+  
+  // Fetch data for all protocols in parallel
+  const results = await Promise.all(
+    slugs.map(async (slug) => {
+      const config = PROTOCOL_CONFIG[slug];
+      
+      const [holdersData, feesData] = await Promise.all([
+        fetchHoldersRevenue(slug),
+        fetchTotalFees(slug),
+      ]);
+      
+      // Get market data
+      const mcData = marketCaps[config.geckoId];
+      const price = mcData?.usd || 0;
+      const marketCap = mcData?.usd_market_cap || 0;
+      const priceChange24h = mcData?.usd_24h_change || 0;
+      
+      // Calculate annualized buyback rate
+      const holdersRev30d = holdersData?.total30d || 0;
+      const annualized = holdersRev30d * 12;
+      const buybackRate = marketCap > 0 ? (annualized / marketCap) * 100 : 0;
+      
+      return {
+        slug,
+        name: config.name,
+        symbol: config.symbol,
+        mechanism: config.mechanism,
+        description: config.description,
+        price,
+        marketCap,
+        priceChange24h,
+        holdersRevenue24h: holdersData?.total24h || 0,
+        holdersRevenue7d: holdersData?.total7d || 0,
+        holdersRevenue30d: holdersData?.total30d || 0,
+        holdersRevenueAllTime: holdersData?.totalAllTime || 0,
+        totalFees24h: feesData?.total24h || 0,
+        totalFees30d: feesData?.total30d || 0,
+        buybackRate,
+        dailyChart: holdersData?.chart || [],
+      };
+    })
+  );
+  
+  // Filter out protocols with no data and sort by buyback rate
+  return results
+    .filter(p => p.holdersRevenue30d > 0 || p.totalFees30d > 10000)
+    .sort((a, b) => b.buybackRate - a.buybackRate);
 }
 
-export async function fetchCombinedData(): Promise<ProtocolBuybackData[]> {
-  const [feeData, marketCaps] = await Promise.all([
-    fetchAllProtocolData(),
-    fetchMarketCaps(),
-  ]);
-
-  const combined: ProtocolBuybackData[] = [];
-
-  for (const fee of feeData) {
-    const protocol = BUYBACK_PROTOCOLS.find(p => p.slug === fee.slug);
-    if (!protocol) continue;
-
-    const mcData = marketCaps[protocol.geckoId];
-    const marketCap = mcData?.usd_market_cap || 0;
-    const price = mcData?.usd || 0;
-    const priceChange24h = mcData?.usd_24h_change || 0;
-
-    // Calculate annualized buyback rate
-    const annualizedBuyback = (fee.total30d || 0) * 12;
-    const buybackRate = marketCap > 0 ? (annualizedBuyback / marketCap) * 100 : 0;
-
-    combined.push({
-      slug: fee.slug,
-      name: fee.name,
-      symbol: fee.symbol,
-      mechanism: protocol.mechanism,
-      description: protocol.description,
-      price,
-      marketCap,
-      priceChange24h,
-      buyback24h: fee.total24h || 0,
-      buyback7d: fee.total7d || 0,
-      buyback30d: fee.total30d || 0,
-      buybackAllTime: fee.totalAllTime || 0,
-      buybackRate,
-      dailyChart: fee.dailyChart,
-    });
+// Get overview fees data to discover more protocols
+export async function fetchOverviewFees(): Promise<any[]> {
+  try {
+    const response = await fetch(
+      `${DEFILLAMA_API}/overview/fees?excludeTotalDataChart=true&excludeTotalDataChartBreakdown=true`
+    );
+    if (!response.ok) return [];
+    const data = await response.json();
+    return data.protocols || [];
+  } catch (error) {
+    console.error('Failed to fetch overview:', error);
+    return [];
   }
-
-  // Sort by buyback rate descending
-  return combined.sort((a, b) => b.buybackRate - a.buybackRate);
 }
-
