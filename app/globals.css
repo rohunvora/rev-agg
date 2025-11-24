@@ -2,224 +2,140 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&display=swap');
 
 :root {
-  --font-geist: 'Inter', system-ui, sans-serif;
-  --font-geist-mono: 'JetBrains Mono', monospace;
+  --font-mono: 'IBM Plex Mono', monospace;
 }
 
 * {
   box-sizing: border-box;
 }
 
-html {
-  scroll-behavior: smooth;
-}
-
 body {
-  font-family: var(--font-geist);
-  background: #0a0a0f;
-  color: #e5e5e5;
-  min-height: 100vh;
+  font-family: var(--font-mono);
+  background: #000;
+  color: #fff;
+  line-height: 1.4;
 }
 
-/* Custom scrollbar */
+/* Minimal scrollbar */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 4px;
+  height: 4px;
 }
 
 ::-webkit-scrollbar-track {
-  background: transparent;
+  background: #000;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #2a2a3a;
-  border-radius: 3px;
+  background: #333;
 }
 
-::-webkit-scrollbar-thumb:hover {
-  background: #3a3a4a;
+/* Selection */
+::selection {
+  background: #fff;
+  color: #000;
 }
 
-/* Glowing effects */
-.glow-accent {
-  box-shadow: 0 0 20px rgba(0, 255, 136, 0.15),
-              0 0 40px rgba(0, 255, 136, 0.1),
-              0 0 60px rgba(0, 255, 136, 0.05);
+/* Focus */
+*:focus {
+  outline: 1px solid #fff;
+  outline-offset: 2px;
 }
 
-.glow-text {
-  text-shadow: 0 0 20px rgba(0, 255, 136, 0.5);
+/* Table */
+table {
+  border-collapse: collapse;
+  width: 100%;
 }
 
-/* Grid background pattern */
-.grid-pattern {
-  background-image: 
-    linear-gradient(rgba(42, 42, 58, 0.2) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(42, 42, 58, 0.2) 1px, transparent 1px);
-  background-size: 32px 32px;
+th, td {
+  text-align: left;
+  padding: 8px 12px;
+  border-bottom: 1px solid #222;
 }
 
-/* Gradient backgrounds */
-.gradient-radial {
-  background: radial-gradient(ellipse at top, rgba(0, 255, 136, 0.08) 0%, transparent 50%);
+th {
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  color: #666;
 }
 
-.gradient-mesh {
-  background: 
-    radial-gradient(at 40% 20%, rgba(0, 255, 136, 0.08) 0px, transparent 50%),
-    radial-gradient(at 80% 0%, rgba(0, 204, 106, 0.06) 0px, transparent 50%),
-    radial-gradient(at 0% 50%, rgba(0, 255, 136, 0.04) 0px, transparent 50%),
-    radial-gradient(at 80% 50%, rgba(255, 184, 0, 0.03) 0px, transparent 50%),
-    radial-gradient(at 0% 100%, rgba(0, 255, 136, 0.06) 0px, transparent 50%);
+tr:hover td {
+  background: #111;
 }
 
-/* Card hover effects */
-.card-hover {
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+/* Links */
+a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
-.card-hover:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.3),
-              0 0 24px rgba(0, 255, 136, 0.08);
-  border-color: rgba(0, 255, 136, 0.2);
+a:hover {
+  text-decoration: none;
 }
 
-/* Flash animations for price changes */
-@keyframes flash-green {
-  0%, 100% { background-color: transparent; }
-  50% { background-color: rgba(0, 255, 136, 0.1); }
+/* Inputs */
+input, select {
+  font-family: inherit;
+  background: #000;
+  color: #fff;
+  border: 1px solid #333;
+  padding: 6px 10px;
+  font-size: 12px;
 }
 
-@keyframes flash-red {
-  0%, 100% { background-color: transparent; }
-  50% { background-color: rgba(255, 71, 87, 0.1); }
+input:focus, select:focus {
+  border-color: #fff;
 }
 
-.animate-flash-green {
-  animation: flash-green 0.5s ease-out;
+/* Buttons */
+button {
+  font-family: inherit;
+  background: #fff;
+  color: #000;
+  border: none;
+  padding: 6px 12px;
+  font-size: 12px;
+  cursor: pointer;
+  font-weight: 600;
 }
 
-.animate-flash-red {
-  animation: flash-red 0.5s ease-out;
+button:hover {
+  background: #ccc;
 }
 
-/* Number animations */
-@keyframes countUp {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-.animate-count {
-  animation: countUp 0.4s ease-out forwards;
-}
-
-/* Staggered animations */
-.stagger-1 { animation-delay: 0.05s; }
-.stagger-2 { animation-delay: 0.1s; }
-.stagger-3 { animation-delay: 0.15s; }
-.stagger-4 { animation-delay: 0.2s; }
-.stagger-5 { animation-delay: 0.25s; }
-
-/* Progress bar animation */
-@keyframes progress {
-  from { width: 0%; }
-}
-
-.animate-progress {
-  animation: progress 0.8s ease-out forwards;
-}
-
-/* Tabular numbers for consistent alignment */
-.tabular-nums {
-  font-variant-numeric: tabular-nums;
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 /* Skeleton loading */
-@keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
-}
-
 .skeleton {
-  background: linear-gradient(
-    90deg,
-    rgba(42, 42, 58, 0.5) 25%,
-    rgba(42, 42, 58, 0.8) 50%,
-    rgba(42, 42, 58, 0.5) 75%
-  );
+  background: linear-gradient(90deg, #111 25%, #222 50%, #111 75%);
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
 }
 
-/* Focus styles */
-input:focus,
-select:focus,
-button:focus-visible {
-  outline: none;
-  ring: 1px solid rgba(0, 255, 136, 0.5);
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
 }
 
-/* Selection color */
-::selection {
-  background: rgba(0, 255, 136, 0.3);
-  color: white;
-}
+/* Positive/Negative values */
+.positive { color: #00ff00; }
+.negative { color: #ff0000; }
 
-/* Smooth scrollbar for activity feed */
-.scrollbar-thin::-webkit-scrollbar {
-  width: 4px;
-}
+/* Muted text */
+.muted { color: #666; }
 
-.scrollbar-thin::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.scrollbar-thin::-webkit-scrollbar-thumb {
-  background: #2a2a3a;
-  border-radius: 2px;
-}
-
-/* Kbd styling */
-kbd {
-  font-family: var(--font-geist-mono);
-  font-size: 10px;
-  border: 1px solid rgba(42, 42, 58, 0.5);
-}
-
-/* Responsive table */
-@media (max-width: 768px) {
-  .overflow-x-auto {
-    -webkit-overflow-scrolling: touch;
-  }
-}
-
-/* Recharts tooltip styling */
-.recharts-tooltip-wrapper {
-  outline: none !important;
-}
-
-.recharts-default-tooltip {
-  background: #1a1a25 !important;
-  border: 1px solid #2a2a3a !important;
-  border-radius: 8px !important;
-  padding: 12px !important;
-}
-
-/* Table row animation */
-tbody tr {
-  transition: background-color 0.15s ease;
-}
-
-/* Live pulse indicator */
-@keyframes live-pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
-}
-
-.live-pulse {
-  animation: live-pulse 2s ease-in-out infinite;
+/* Chart container */
+.chart-container {
+  background: #0a0a0a;
+  border: 1px solid #222;
 }

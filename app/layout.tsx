@@ -2,8 +2,8 @@ import type { Metadata } from 'next'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'Buyback Tracker | Crypto Revenue Aggregator',
-  description: 'Track and analyze cryptocurrency token buyback programs relative to market cap',
+  title: 'Buyback Tracker',
+  description: 'Real-time crypto token buyback data aggregated from DefiLlama',
 }
 
 export default function RootLayout({
@@ -13,10 +13,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className="antialiased">
-        {children}
-      </body>
+      <body>{children}</body>
     </html>
   )
 }
-
