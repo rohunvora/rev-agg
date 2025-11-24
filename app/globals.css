@@ -1,0 +1,225 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap');
+
+:root {
+  --font-geist: 'Inter', system-ui, sans-serif;
+  --font-geist-mono: 'JetBrains Mono', monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-geist);
+  background: #0a0a0f;
+  color: #e5e5e5;
+  min-height: 100vh;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #2a2a3a;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #3a3a4a;
+}
+
+/* Glowing effects */
+.glow-accent {
+  box-shadow: 0 0 20px rgba(0, 255, 136, 0.15),
+              0 0 40px rgba(0, 255, 136, 0.1),
+              0 0 60px rgba(0, 255, 136, 0.05);
+}
+
+.glow-text {
+  text-shadow: 0 0 20px rgba(0, 255, 136, 0.5);
+}
+
+/* Grid background pattern */
+.grid-pattern {
+  background-image: 
+    linear-gradient(rgba(42, 42, 58, 0.2) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(42, 42, 58, 0.2) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+
+/* Gradient backgrounds */
+.gradient-radial {
+  background: radial-gradient(ellipse at top, rgba(0, 255, 136, 0.08) 0%, transparent 50%);
+}
+
+.gradient-mesh {
+  background: 
+    radial-gradient(at 40% 20%, rgba(0, 255, 136, 0.08) 0px, transparent 50%),
+    radial-gradient(at 80% 0%, rgba(0, 204, 106, 0.06) 0px, transparent 50%),
+    radial-gradient(at 0% 50%, rgba(0, 255, 136, 0.04) 0px, transparent 50%),
+    radial-gradient(at 80% 50%, rgba(255, 184, 0, 0.03) 0px, transparent 50%),
+    radial-gradient(at 0% 100%, rgba(0, 255, 136, 0.06) 0px, transparent 50%);
+}
+
+/* Card hover effects */
+.card-hover {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.3),
+              0 0 24px rgba(0, 255, 136, 0.08);
+  border-color: rgba(0, 255, 136, 0.2);
+}
+
+/* Flash animations for price changes */
+@keyframes flash-green {
+  0%, 100% { background-color: transparent; }
+  50% { background-color: rgba(0, 255, 136, 0.1); }
+}
+
+@keyframes flash-red {
+  0%, 100% { background-color: transparent; }
+  50% { background-color: rgba(255, 71, 87, 0.1); }
+}
+
+.animate-flash-green {
+  animation: flash-green 0.5s ease-out;
+}
+
+.animate-flash-red {
+  animation: flash-red 0.5s ease-out;
+}
+
+/* Number animations */
+@keyframes countUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-count {
+  animation: countUp 0.4s ease-out forwards;
+}
+
+/* Staggered animations */
+.stagger-1 { animation-delay: 0.05s; }
+.stagger-2 { animation-delay: 0.1s; }
+.stagger-3 { animation-delay: 0.15s; }
+.stagger-4 { animation-delay: 0.2s; }
+.stagger-5 { animation-delay: 0.25s; }
+
+/* Progress bar animation */
+@keyframes progress {
+  from { width: 0%; }
+}
+
+.animate-progress {
+  animation: progress 0.8s ease-out forwards;
+}
+
+/* Tabular numbers for consistent alignment */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Skeleton loading */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    rgba(42, 42, 58, 0.5) 25%,
+    rgba(42, 42, 58, 0.8) 50%,
+    rgba(42, 42, 58, 0.5) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+/* Focus styles */
+input:focus,
+select:focus,
+button:focus-visible {
+  outline: none;
+  ring: 1px solid rgba(0, 255, 136, 0.5);
+}
+
+/* Selection color */
+::selection {
+  background: rgba(0, 255, 136, 0.3);
+  color: white;
+}
+
+/* Smooth scrollbar for activity feed */
+.scrollbar-thin::-webkit-scrollbar {
+  width: 4px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: #2a2a3a;
+  border-radius: 2px;
+}
+
+/* Kbd styling */
+kbd {
+  font-family: var(--font-geist-mono);
+  font-size: 10px;
+  border: 1px solid rgba(42, 42, 58, 0.5);
+}
+
+/* Responsive table */
+@media (max-width: 768px) {
+  .overflow-x-auto {
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* Recharts tooltip styling */
+.recharts-tooltip-wrapper {
+  outline: none !important;
+}
+
+.recharts-default-tooltip {
+  background: #1a1a25 !important;
+  border: 1px solid #2a2a3a !important;
+  border-radius: 8px !important;
+  padding: 12px !important;
+}
+
+/* Table row animation */
+tbody tr {
+  transition: background-color 0.15s ease;
+}
+
+/* Live pulse indicator */
+@keyframes live-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.live-pulse {
+  animation: live-pulse 2s ease-in-out infinite;
+}
