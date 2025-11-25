@@ -1,8 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { PROTOCOLS } from '@/lib/protocols';
-import { fetchBuybackData, fetchJupiterCombinedData, fetchMarketData, fetchRevenueData, fetchRevenueDetail, RevenueProtocol, RevenueDetail } from '@/lib/defillama';
+import { fetchRevenueDetail, RevenueProtocol, RevenueDetail } from '@/lib/defillama';
 import { ProtocolData, SortKey } from '@/lib/types';
 import {
   AreaChart,
@@ -92,51 +91,16 @@ export default function Home() {
     }
   };
 
-  const loadBuybackData = useCallback(async (isInitial = false) => {
+  // Fetch from our cached API route instead of hitting external APIs directly
+  const loadBuybackData = useCallback(async () => {
     try {
-      const geckoIds = PROTOCOLS.map(p => p.geckoId);
-      const marketData = await fetchMarketData(geckoIds);
-      const hasMarketData = Object.keys(marketData).length > 0;
+      const response = await fetch('/api/data?type=buybacks');
+      const { data } = await response.json();
       
-      const results = await Promise.all(
-        PROTOCOLS.map(async (protocol) => {
-          // Jupiter combines perps + aggregator data
-          const buyback = protocol.slug === 'jupiter-perps'
-            ? await fetchJupiterCombinedData()
-            : await fetchBuybackData(protocol.slug);
-          
-          const market = marketData[protocol.geckoId] || { 
-            price: 0, marketCap: 0, volume24h: 0, priceChange24h: 0, priceChange7d: 0, priceChange14d: 0, priceChange30d: 0 
-          };
-          
-          const dailyAvg = buyback?.avg30d || 0;
-          const annualized = dailyAvg * 365;
-          const buybackToMcap = market.marketCap > 0 ? (annualized / market.marketCap) * 100 : 0;
-          const peRatio = annualized > 0 ? market.marketCap / annualized : 0;
-          // Buyback as % of daily trading volume - shows how significant buybacks are
-          const buybackVsVolume = market.volume24h > 0 ? (dailyAvg / market.volume24h) * 100 : 0;
-          
-          return {
-            ...protocol,
-            buyback,
-            price: market.price,
-            marketCap: market.marketCap,
-            volume24h: market.volume24h,
-            priceChange7d: market.priceChange7d,
-            dailyAvg,
-            buybackToMcap,
-            buyback7d: buyback?.trends.change7d || 0,
-            peRatio,
-            buybackVsVolume,
-          };
-        })
-      );
-      
-      const filtered = results.filter(p => p.buyback?.total30d && p.buyback.total30d > 0);
-      
-      if (filtered.length > 0 && (hasMarketData || buybackData.length === 0)) {
+      if (data && data.length > 0) {
+        // Track changes for flash animation
         const newFlash = new Set<string>();
-        for (const p of filtered) {
+        for (const p of data) {
           const prev = prevDataRef.current.get(p.slug);
           if (prev !== undefined && Math.abs(prev - p.dailyAvg) > 100) {
             newFlash.add(p.slug);
@@ -149,17 +113,18 @@ export default function Home() {
           setTimeout(() => setFlashRows(new Set()), 1200);
         }
         
-        setBuybackData(filtered);
+        setBuybackData(data);
       }
     } catch (error) {
       console.error('Error loading buyback data:', error);
     }
-  }, [buybackData.length]);
+  }, []);
 
   const loadRevenueData = useCallback(async () => {
     try {
-      const data = await fetchRevenueData();
-      if (data.length > 0) {
+      const response = await fetch('/api/data?type=revenue');
+      const { data } = await response.json();
+      if (data && data.length > 0) {
         setRevenueData(data);
       }
     } catch (error) {
@@ -171,7 +136,7 @@ export default function Home() {
     if (isInitial) setLoading(true);
     
     await Promise.all([
-      loadBuybackData(isInitial),
+      loadBuybackData(),
       loadRevenueData(),
     ]);
     
@@ -341,18 +306,18 @@ export default function Home() {
         ) : viewMode === 'buybacks' ? (
           /* Buybacks Table */
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="leaderboard" style={{ minWidth: 700 }}>
+            <div className="table-wrapper">
+              <table className="leaderboard">
                 <colgroup>
-                  <col style={{ width: 40 }} />
-                  <col style={{ width: '20%' }} />
-                  <col style={{ width: '11%' }} className="hidden sm:table-column" />
-                  <col style={{ width: '11%' }} />
-                  <col style={{ width: '8%' }} className="hidden lg:table-column" />
-                  <col style={{ width: '8%' }} className="hidden md:table-column" />
-                  <col style={{ width: '9%' }} className="hidden sm:table-column" />
-                  <col style={{ width: '9%' }} />
-                  <col style={{ width: '9%' }} />
+                  <col className="w-10 sm:w-12" />
+                  <col className="w-auto" />
+                  <col className="hidden sm:table-column w-[12%]" />
+                  <col className="w-[22%] sm:w-[12%]" />
+                  <col className="hidden lg:table-column w-[9%]" />
+                  <col className="hidden md:table-column w-[9%]" />
+                  <col className="hidden sm:table-column w-[10%]" />
+                  <col className="w-[18%] sm:w-[10%]" />
+                  <col className="hidden sm:table-column w-[10%]" />
                 </colgroup>
                 <thead>
                   <tr>
@@ -372,8 +337,8 @@ export default function Home() {
                     </th>
                     <SortHeader label="P/E" sortKey="peRatio" className="text-right hidden md:table-cell" />
                     <SortHeader label="% MCap/yr" sortKey="buybackToMcap" className="text-right hidden sm:table-cell" />
-                    <SortHeader label="BB 7d" sortKey="buyback7d" className="text-right" />
-                    <SortHeader label="Price 7d" sortKey="priceChange7d" className="text-right" />
+                    <SortHeader label="7d" sortKey="buyback7d" className="text-right" />
+                    <SortHeader label="Price 7d" sortKey="priceChange7d" className="text-right hidden sm:table-cell" />
                   </tr>
                 </thead>
                 <tbody>
@@ -386,8 +351,8 @@ export default function Home() {
                       <td><Rank position={idx + 1} mode="buybacks" /></td>
                       <td>
                         <div className="font-semibold text-sm sm:text-base">{p.symbol}</div>
-                        <div className="text-xs text-gray-500 truncate max-w-[100px] sm:max-w-[140px]">
-                          {p.buybackSource}
+                        <div className="text-xs text-gray-500 truncate max-w-[80px] sm:max-w-[140px]">
+                          {p.name}
                         </div>
                       </td>
                       <td className="text-right hidden sm:table-cell">
@@ -412,7 +377,7 @@ export default function Home() {
                       <td className="text-right">
                         <Pct value={p.buyback7d} />
                       </td>
-                      <td className="text-right">
+                      <td className="text-right hidden sm:table-cell">
                         <Pct value={p.priceChange7d} />
                       </td>
                     </tr>
@@ -424,22 +389,22 @@ export default function Home() {
         ) : (
           /* Revenue Table */
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="leaderboard" style={{ minWidth: 600 }}>
+            <div className="table-wrapper">
+              <table className="leaderboard">
                 <colgroup>
-                  <col style={{ width: 48 }} />
-                  <col style={{ width: '35%' }} />
-                  <col style={{ width: '20%' }} />
-                  <col style={{ width: '15%' }} />
-                  <col style={{ width: '15%' }} />
+                  <col className="w-10 sm:w-12" />
+                  <col className="w-auto" />
+                  <col className="w-[22%] sm:w-[18%]" />
+                  <col className="w-[18%] sm:w-[15%]" />
+                  <col className="hidden sm:table-column w-[15%]" />
                 </colgroup>
                 <thead>
                   <tr>
                     <th>#</th>
                     <th>Protocol</th>
                     <RevSortHeader label="Daily" sortKey="total24h" className="text-right" />
-                    <RevSortHeader label="7d Chg" sortKey="change7d" className="text-right" />
-                    <RevSortHeader label="30d Total" sortKey="total30d" className="text-right" />
+                    <RevSortHeader label="7d" sortKey="change7d" className="text-right" />
+                    <RevSortHeader label="30d Total" sortKey="total30d" className="text-right hidden sm:table-cell" />
                   </tr>
                 </thead>
                 <tbody>
@@ -447,25 +412,23 @@ export default function Home() {
                     <tr key={p.slug} onClick={() => handleRevenueClick(p)}>
                       <td><Rank position={idx + 1} mode="revenue" /></td>
                       <td>
-                        <div className="flex items-center gap-2">
-                          <div>
-                            <div className="font-semibold flex items-center gap-2">
-                              {p.name}
-                              {p.hasBuyback && (
-                                <span className="buyback-badge">🔄 Buyback</span>
-                              )}
-                            </div>
-                            <div className="text-xs text-gray-500">{p.category}</div>
+                        <div>
+                          <div className="font-semibold text-sm sm:text-base flex items-center gap-1 sm:gap-2 flex-wrap">
+                            <span className="truncate max-w-[100px] sm:max-w-none">{p.name}</span>
+                            {p.hasBuyback && (
+                              <span className="buyback-badge text-[9px] sm:text-[10px]">🔄</span>
+                            )}
                           </div>
+                          <div className="text-xs text-gray-500 truncate max-w-[100px] sm:max-w-none">{p.category}</div>
                         </div>
                       </td>
                       <td className="text-right">
-                        <span className="num font-medium">{formatUSD(p.total24h, true)}</span>
+                        <span className="num font-medium text-sm sm:text-base">{formatUSD(p.total24h, true)}</span>
                       </td>
                       <td className="text-right">
                         <Pct value={p.change7d} />
                       </td>
-                      <td className="text-right">
+                      <td className="text-right hidden sm:table-cell">
                         <span className="num">{formatUSD(p.total30d, true)}</span>
                       </td>
                     </tr>
