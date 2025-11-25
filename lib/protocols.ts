@@ -35,7 +35,6 @@ export const PROTOCOLS: ProtocolConfig[] = [
     businessModel: 'Memecoin launchpad on Solana. Charges 1% on bonding curve trades. Revenue used to buy and burn PUMP.',
     growthDrivers: 'Memecoin cycles, Solana growth, market euphoria',
     risks: 'Memecoin fatigue, launchpad competition, regulatory scrutiny',
-    notes: ['Team has sold >$400M USDC', '18% supply to private investors'],
     verifyUrl: 'https://solscan.io/account/CebN5WGQ4jvEPvsVU4EoHEpgzq1VV7AbicfhtW4xC9iM',
   },
   {

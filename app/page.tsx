@@ -66,6 +66,34 @@ export default function Home() {
   const [revSortDesc, setRevSortDesc] = useState(true);
   const [flashRows, setFlashRows] = useState<Set<string>>(new Set());
   const prevDataRef = useRef<Map<string, number>>(new Map());
+  const [darkMode, setDarkMode] = useState(false);
+
+  // Initialize dark mode from localStorage or system preference
+  useEffect(() => {
+    const stored = localStorage.getItem('theme');
+    if (stored === 'dark') {
+      setDarkMode(true);
+      document.documentElement.classList.add('dark');
+    } else if (stored === 'light') {
+      setDarkMode(false);
+      document.documentElement.classList.remove('dark');
+    } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+      setDarkMode(true);
+      document.documentElement.classList.add('dark');
+    }
+  }, []);
+
+  const toggleDarkMode = () => {
+    const newMode = !darkMode;
+    setDarkMode(newMode);
+    if (newMode) {
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('theme', 'dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('theme', 'light');
+    }
+  };
 
   const loadBuybackData = useCallback(async (isInitial = false) => {
     try {
@@ -231,7 +259,18 @@ export default function Home() {
   };
 
   return (
-    <div className={`min-h-screen transition-colors duration-500 ${viewMode === 'revenue' ? 'bg-revenue' : 'bg-buyback'}`}>
+    <div className={`min-h-screen transition-colors duration-200 ${viewMode === 'revenue' ? 'bg-revenue' : 'bg-buyback'}`}>
+      {/* Theme Toggle */}
+      <div className="absolute top-4 right-4 z-10">
+        <button
+          onClick={toggleDarkMode}
+          className="theme-toggle"
+          aria-label="Toggle dark mode"
+        >
+          {darkMode ? '☀️' : '🌙'}
+        </button>
+      </div>
+
       {/* Hero */}
       <header className="text-center py-8 sm:py-12 px-4 sm:px-6">
         <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight mb-3 sm:mb-4">
