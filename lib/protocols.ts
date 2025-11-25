@@ -156,10 +156,10 @@ export const PROTOCOLS: ProtocolConfig[] = [
   {
     slug: 'launch-coin-on-believe',
     name: 'Believe',
-    symbol: 'LAUNCHCOIN',
-    geckoId: 'believe',
+    symbol: 'BELIEVE',
+    geckoId: 'ben-pasternak',
     buybackSource: 'Launchpad trading fees (50/50 split)',
-    businessModel: 'Memecoin launchpad. Platform takes 50% of trading fees, portion used for LAUNCHCOIN buybacks.',
+    businessModel: 'Memecoin launchpad. Platform takes 50% of trading fees, portion used for BELIEVE buybacks.',
     growthDrivers: 'Launchpad adoption, memecoin cycles, creator incentives',
     risks: 'Low current volume, platform migration history, competition',
   },
