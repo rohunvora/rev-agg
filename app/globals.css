@@ -139,6 +139,21 @@ body {
   color: #999;
 }
 
+/* P/E ratio tiers - subtle background tints */
+.pe-low {
+  background: rgba(22, 163, 74, 0.08);
+  border-radius: 4px;
+  padding: 2px 6px;
+  margin: -2px -6px;
+}
+
+.pe-high {
+  background: rgba(220, 38, 38, 0.08);
+  border-radius: 4px;
+  padding: 2px 6px;
+  margin: -2px -6px;
+}
+
 /* Flash */
 @keyframes flash {
   0% { background-color: rgba(250, 204, 21, 0.3); }

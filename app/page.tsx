@@ -346,7 +346,9 @@ export default function Home() {
                         <span className="num font-medium">{formatUSD(p.dailyAvg, true)}</span>
                       </td>
                       <td className="text-right hidden md:table-cell">
-                        <span className="num">{p.peRatio > 0 ? p.peRatio.toFixed(1) + 'x' : '—'}</span>
+                        <span className={`num ${p.peRatio > 0 && p.peRatio < 10 ? 'pe-low' : p.peRatio >= 30 ? 'pe-high' : ''}`}>
+                          {p.peRatio > 0 ? p.peRatio.toFixed(1) + 'x' : '—'}
+                        </span>
                       </td>
                       <td className="text-right hidden sm:table-cell">
                         <span className="num">{p.buybackToMcap.toFixed(1)}%</span>
@@ -418,8 +420,11 @@ export default function Home() {
           </div>
         )}
 
-        <footer className="mt-6 sm:mt-8 text-center text-xs sm:text-sm text-gray-400 px-4">
-          Data from DefiLlama & CoinGecko · {viewMode === 'buybacks' ? 'Verified buybacks only' : 'Top 30 by daily revenue'} · Tap row for details
+        <footer className="mt-6 sm:mt-8 text-center text-xs sm:text-sm text-gray-400 px-4 space-y-1">
+          <div>Data from DefiLlama & CoinGecko · {viewMode === 'buybacks' ? 'Verified buybacks only' : 'Top 30 by daily revenue'} · Tap row for details</div>
+          {viewMode === 'buybacks' && (
+            <div className="text-gray-300">P/E: <span className="pe-low text-gray-400">&lt;10x</span> · <span className="pe-high text-gray-400">&gt;30x</span> — lower = more buyback per $ market cap</div>
+          )}
         </footer>
       </main>
 
@@ -465,7 +470,9 @@ export default function Home() {
               </div>
               <div>
                 <div className="text-xs sm:text-sm text-gray-500">P/E Multiple</div>
-                <div className="text-lg sm:text-xl font-semibold num">{selectedProtocol.peRatio > 0 ? selectedProtocol.peRatio.toFixed(1) + 'x' : '—'}</div>
+                <div className={`text-lg sm:text-xl font-semibold num inline-block ${selectedProtocol.peRatio > 0 && selectedProtocol.peRatio < 10 ? 'pe-low' : selectedProtocol.peRatio >= 30 ? 'pe-high' : ''}`}>
+                  {selectedProtocol.peRatio > 0 ? selectedProtocol.peRatio.toFixed(1) + 'x' : '—'}
+                </div>
               </div>
               <div>
                 <div className="text-xs sm:text-sm text-gray-500">% of MCap / yr</div>
