@@ -186,19 +186,26 @@ body {
   vertical-align: middle;
 }
 
-/* Mobile table cell adjustments */
+/* Mobile table - compressed for screenshots */
 @media (max-width: 640px) {
+  .leaderboard th {
+    padding: 10px 6px;
+    font-size: 9px;
+  }
+  
   .leaderboard td {
-    padding: 14px 10px;
-    font-size: 14px;
+    padding: 10px 6px;
+    font-size: 12px;
   }
   
+  .leaderboard th:first-child,
   .leaderboard td:first-child {
-    padding-left: 12px;
+    padding-left: 8px;
   }
   
+  .leaderboard th:last-child,
   .leaderboard td:last-child {
-    padding-right: 12px;
+    padding-right: 8px;
   }
 }
 
@@ -325,9 +332,10 @@ body {
 
 @media (max-width: 640px) {
   .rank {
-    width: 26px;
-    height: 26px;
-    font-size: 12px;
+    width: 22px;
+    height: 22px;
+    font-size: 10px;
+    border-radius: 4px;
   }
 }
 

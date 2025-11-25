@@ -307,38 +307,17 @@ export default function Home() {
           /* Buybacks Table */
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
             <div className="table-wrapper">
-              <table className="leaderboard">
-                <colgroup>
-                  <col className="w-10 sm:w-12" />
-                  <col className="w-auto" />
-                  <col className="hidden sm:table-column w-[12%]" />
-                  <col className="w-[22%] sm:w-[12%]" />
-                  <col className="hidden lg:table-column w-[9%]" />
-                  <col className="hidden md:table-column w-[9%]" />
-                  <col className="hidden sm:table-column w-[10%]" />
-                  <col className="w-[18%] sm:w-[10%]" />
-                  <col className="hidden sm:table-column w-[10%]" />
-                </colgroup>
+              <table className="leaderboard" style={{ minWidth: 580 }}>
                 <thead>
                   <tr>
-                    <th>#</th>
-                    <th>Token</th>
-                    <SortHeader label="MCap" sortKey="marketCap" className="text-right hidden sm:table-cell" />
-                    <SortHeader label="Daily Avg" sortKey="dailyAvg" className="text-right" />
-                    <th 
-                      className="text-right hidden lg:table-cell sortable cursor-pointer"
-                      onClick={() => handleSort('buybackVsVolume')}
-                      title="Buyback as % of 24h trading volume. Higher = more significant buy pressure relative to market activity."
-                    >
-                      <span className="flex items-center justify-end gap-1">
-                        BB/Vol
-                        {sortBy === 'buybackVsVolume' && <span>{sortDesc ? '↓' : '↑'}</span>}
-                      </span>
-                    </th>
-                    <SortHeader label="P/E" sortKey="peRatio" className="text-right hidden md:table-cell" />
-                    <SortHeader label="% MCap/yr" sortKey="buybackToMcap" className="text-right hidden sm:table-cell" />
-                    <SortHeader label="7d" sortKey="buyback7d" className="text-right" />
-                    <SortHeader label="Price 7d" sortKey="priceChange7d" className="text-right hidden sm:table-cell" />
+                    <th style={{ width: 36 }}>#</th>
+                    <th style={{ width: 90 }}>Token</th>
+                    <SortHeader label="MCap" sortKey="marketCap" className="text-right" />
+                    <SortHeader label="Daily" sortKey="dailyAvg" className="text-right" />
+                    <SortHeader label="P/E" sortKey="peRatio" className="text-right" />
+                    <SortHeader label="%MC" sortKey="buybackToMcap" className="text-right" />
+                    <SortHeader label="BB7d" sortKey="buyback7d" className="text-right" />
+                    <SortHeader label="Pr7d" sortKey="priceChange7d" className="text-right" />
                   </tr>
                 </thead>
                 <tbody>
@@ -350,34 +329,29 @@ export default function Home() {
                     >
                       <td><Rank position={idx + 1} mode="buybacks" /></td>
                       <td>
-                        <div className="font-semibold text-sm sm:text-base">{p.symbol}</div>
-                        <div className="text-xs text-gray-500 truncate max-w-[80px] sm:max-w-[140px]">
+                        <div className="font-semibold text-sm">{p.symbol}</div>
+                        <div className="text-[10px] text-gray-500 truncate max-w-[70px]">
                           {p.name}
                         </div>
                       </td>
-                      <td className="text-right hidden sm:table-cell">
-                        <span className="num">{formatUSD(p.marketCap, true)}</span>
+                      <td className="text-right">
+                        <span className="num text-xs">{formatUSD(p.marketCap, true)}</span>
                       </td>
                       <td className="text-right">
-                        <span className="num font-medium text-sm sm:text-base">{formatUSD(p.dailyAvg, true)}</span>
+                        <span className="num font-medium text-xs">{formatUSD(p.dailyAvg, true)}</span>
                       </td>
-                      <td className="text-right hidden lg:table-cell">
-                        <span className={`num ${p.buybackVsVolume >= 1 ? 'text-green-600' : p.buybackVsVolume >= 0.1 ? '' : 'text-gray-400'}`}>
-                          {p.buybackVsVolume > 0 ? p.buybackVsVolume.toFixed(2) + '%' : '—'}
+                      <td className="text-right">
+                        <span className={`num text-xs ${p.peRatio > 0 && p.peRatio < 10 ? 'pe-low' : p.peRatio >= 30 ? 'pe-high' : ''}`}>
+                          {p.peRatio > 0 ? p.peRatio.toFixed(0) + 'x' : '—'}
                         </span>
                       </td>
-                      <td className="text-right hidden md:table-cell">
-                        <span className={`num ${p.peRatio > 0 && p.peRatio < 10 ? 'pe-low' : p.peRatio >= 30 ? 'pe-high' : ''}`}>
-                          {p.peRatio > 0 ? p.peRatio.toFixed(1) + 'x' : '—'}
-                        </span>
-                      </td>
-                      <td className="text-right hidden sm:table-cell">
-                        <span className="num">{p.buybackToMcap.toFixed(1)}%</span>
+                      <td className="text-right">
+                        <span className="num text-xs">{p.buybackToMcap.toFixed(1)}%</span>
                       </td>
                       <td className="text-right">
                         <Pct value={p.buyback7d} />
                       </td>
-                      <td className="text-right hidden sm:table-cell">
+                      <td className="text-right">
                         <Pct value={p.priceChange7d} />
                       </td>
                     </tr>
@@ -390,21 +364,14 @@ export default function Home() {
           /* Revenue Table */
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
             <div className="table-wrapper">
-              <table className="leaderboard">
-                <colgroup>
-                  <col className="w-10 sm:w-12" />
-                  <col className="w-auto" />
-                  <col className="w-[22%] sm:w-[18%]" />
-                  <col className="w-[18%] sm:w-[15%]" />
-                  <col className="hidden sm:table-column w-[15%]" />
-                </colgroup>
+              <table className="leaderboard" style={{ minWidth: 420 }}>
                 <thead>
                   <tr>
-                    <th>#</th>
-                    <th>Protocol</th>
+                    <th style={{ width: 36 }}>#</th>
+                    <th style={{ width: 110 }}>Protocol</th>
                     <RevSortHeader label="Daily" sortKey="total24h" className="text-right" />
-                    <RevSortHeader label="7d" sortKey="change7d" className="text-right" />
-                    <RevSortHeader label="30d Total" sortKey="total30d" className="text-right hidden sm:table-cell" />
+                    <RevSortHeader label="7d Chg" sortKey="change7d" className="text-right" />
+                    <RevSortHeader label="30d" sortKey="total30d" className="text-right" />
                   </tr>
                 </thead>
                 <tbody>
@@ -412,24 +379,22 @@ export default function Home() {
                     <tr key={p.slug} onClick={() => handleRevenueClick(p)}>
                       <td><Rank position={idx + 1} mode="revenue" /></td>
                       <td>
-                        <div>
-                          <div className="font-semibold text-sm sm:text-base flex items-center gap-1 sm:gap-2 flex-wrap">
-                            <span className="truncate max-w-[100px] sm:max-w-none">{p.name}</span>
-                            {p.hasBuyback && (
-                              <span className="buyback-badge text-[9px] sm:text-[10px]">🔄</span>
-                            )}
-                          </div>
-                          <div className="text-xs text-gray-500 truncate max-w-[100px] sm:max-w-none">{p.category}</div>
+                        <div className="font-semibold text-sm flex items-center gap-1">
+                          <span className="truncate max-w-[80px]">{p.name}</span>
+                          {p.hasBuyback && (
+                            <span className="buyback-badge text-[9px]">🔄</span>
+                          )}
                         </div>
+                        <div className="text-[10px] text-gray-500 truncate max-w-[80px]">{p.category}</div>
                       </td>
                       <td className="text-right">
-                        <span className="num font-medium text-sm sm:text-base">{formatUSD(p.total24h, true)}</span>
+                        <span className="num font-medium text-xs">{formatUSD(p.total24h, true)}</span>
                       </td>
                       <td className="text-right">
                         <Pct value={p.change7d} />
                       </td>
-                      <td className="text-right hidden sm:table-cell">
-                        <span className="num">{formatUSD(p.total30d, true)}</span>
+                      <td className="text-right">
+                        <span className="num text-xs">{formatUSD(p.total30d, true)}</span>
                       </td>
                     </tr>
                   ))}
