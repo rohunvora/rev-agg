@@ -240,22 +240,24 @@ export default function Home() {
           /* Buybacks Table */
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
             <div className="overflow-x-auto">
-              <table className="leaderboard" style={{ minWidth: 640 }}>
+              <table className="leaderboard" style={{ minWidth: 700 }}>
                 <colgroup>
-                  <col style={{ width: 44 }} />
-                  <col style={{ width: '28%' }} />
-                  <col style={{ width: '14%' }} />
-                  <col style={{ width: '10%' }} className="hidden sm:table-column" />
+                  <col style={{ width: 40 }} />
+                  <col style={{ width: '22%' }} />
                   <col style={{ width: '12%' }} className="hidden sm:table-column" />
-                  <col style={{ width: '11%' }} />
-                  <col style={{ width: '11%' }} />
+                  <col style={{ width: '12%' }} />
+                  <col style={{ width: '9%' }} className="hidden md:table-column" />
+                  <col style={{ width: '9%' }} className="hidden sm:table-column" />
+                  <col style={{ width: '10%' }} />
+                  <col style={{ width: '10%' }} />
                 </colgroup>
                 <thead>
                   <tr>
                     <th>#</th>
                     <th>Token</th>
+                    <SortHeader label="MCap" sortKey="marketCap" className="text-right hidden sm:table-cell" />
                     <SortHeader label="Daily Avg" sortKey="dailyAvg" className="text-right" />
-                    <SortHeader label="P/E" sortKey="peRatio" className="text-right hidden sm:table-cell" />
+                    <SortHeader label="P/E" sortKey="peRatio" className="text-right hidden md:table-cell" />
                     <SortHeader label="% MCap" sortKey="buybackToMcap" className="text-right hidden sm:table-cell" />
                     <SortHeader label="BB 7d" sortKey="buyback7d" className="text-right" />
                     <SortHeader label="Price 7d" sortKey="priceChange7d" className="text-right" />
@@ -271,14 +273,17 @@ export default function Home() {
                       <td><Rank position={idx + 1} mode="buybacks" /></td>
                       <td>
                         <div className="font-semibold">{p.symbol}</div>
-                        <div className="text-xs text-gray-500 truncate" style={{ maxWidth: 160 }}>
+                        <div className="text-xs text-gray-500 truncate" style={{ maxWidth: 140 }}>
                           {p.buybackSource}
                         </div>
+                      </td>
+                      <td className="text-right hidden sm:table-cell">
+                        <span className="num">{formatUSD(p.marketCap, true)}</span>
                       </td>
                       <td className="text-right">
                         <span className="num font-medium">{formatUSD(p.dailyAvg, true)}</span>
                       </td>
-                      <td className="text-right hidden sm:table-cell">
+                      <td className="text-right hidden md:table-cell">
                         <span className="num">{p.peRatio > 0 ? p.peRatio.toFixed(1) + 'x' : '—'}</span>
                       </td>
                       <td className="text-right hidden sm:table-cell">
