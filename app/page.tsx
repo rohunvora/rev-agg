@@ -235,7 +235,31 @@ export default function Home() {
       {/* Table */}
       <main className="max-w-5xl mx-auto px-3 sm:px-6 pb-12 sm:pb-16">
         {loading ? (
-          <div className="text-center py-16 sm:py-20 text-gray-400">Loading...</div>
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            {/* Loading header */}
+            <div className="px-4 py-3 bg-gray-50 border-b border-gray-100 flex items-center gap-2">
+              <div className="loading-spinner"></div>
+              <span className="text-sm text-gray-500">Fetching live data from DefiLlama & CoinGecko...</span>
+            </div>
+            {/* Skeleton rows */}
+            <div className="divide-y divide-gray-100">
+              {[...Array(8)].map((_, i) => (
+                <div key={i} className="flex items-center gap-4 p-4">
+                  <div className="skeleton w-8 h-8 rounded-md"></div>
+                  <div className="flex-1">
+                    <div className="skeleton h-5 w-20 mb-2"></div>
+                    <div className="skeleton h-3 w-32"></div>
+                  </div>
+                  <div className="hidden sm:block skeleton h-5 w-16"></div>
+                  <div className="skeleton h-5 w-14"></div>
+                  <div className="hidden md:block skeleton h-5 w-12"></div>
+                  <div className="hidden sm:block skeleton h-5 w-12"></div>
+                  <div className="skeleton h-5 w-14"></div>
+                  <div className="skeleton h-5 w-14"></div>
+                </div>
+              ))}
+            </div>
+          </div>
         ) : viewMode === 'buybacks' ? (
           /* Buybacks Table */
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
