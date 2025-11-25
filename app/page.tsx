@@ -68,18 +68,15 @@ export default function Home() {
   const prevDataRef = useRef<Map<string, number>>(new Map());
   const [darkMode, setDarkMode] = useState(false);
 
-  // Initialize dark mode from localStorage or system preference
+  // Initialize dark mode from localStorage only (light mode is default)
   useEffect(() => {
     const stored = localStorage.getItem('theme');
     if (stored === 'dark') {
       setDarkMode(true);
       document.documentElement.classList.add('dark');
-    } else if (stored === 'light') {
+    } else {
       setDarkMode(false);
       document.documentElement.classList.remove('dark');
-    } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-      setDarkMode(true);
-      document.documentElement.classList.add('dark');
     }
   }, []);
 
