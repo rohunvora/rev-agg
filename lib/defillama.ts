@@ -173,9 +173,12 @@ export async function fetchMarketData(geckoIds: string[]): Promise<Record<string
     const result: Record<string, MarketData> = {};
     
     for (const coin of data) {
+      // Use FDV as fallback if market_cap is missing (CoinGecko bug for some tokens like MKR)
+      const marketCap = coin.market_cap || coin.fully_diluted_valuation || 0;
+      
       result[coin.id] = {
         price: coin.current_price || 0,
-        marketCap: coin.market_cap || 0,
+        marketCap,
         priceChange24h: coin.price_change_percentage_24h || 0,
         priceChange7d: coin.price_change_percentage_7d_in_currency || 0,
         priceChange14d: coin.price_change_percentage_14d_in_currency || 0,
