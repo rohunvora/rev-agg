@@ -103,6 +103,16 @@ export const PROTOCOLS: ProtocolConfig[] = [
     growthDrivers: 'Memecoin trading volume, new chain support, bot features',
     risks: 'Bot competition (Maestro, Trojan), memecoin fatigue, Telegram risks',
   },
+  {
+    slug: 'helium-network',
+    name: 'Helium',
+    symbol: 'HNT',
+    geckoId: 'helium',
+    buybackSource: 'Network fees + Helium Mobile subscriber revenue',
+    businessModel: 'Decentralized wireless network. HNT burned when converted to Data Credits. Network fees and mobile subscriber revenue fund buyback & burn program.',
+    growthDrivers: 'IoT adoption, Helium Mobile growth, 5G expansion, enterprise partnerships',
+    risks: 'Network adoption rates, competition from traditional telecom, hardware requirements',
+  },
 ];
 
 /**

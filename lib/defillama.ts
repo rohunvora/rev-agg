@@ -208,6 +208,7 @@ const BUYBACK_SLUGS = new Set([
   'pancakeswap-amm-v3',
   'sushiswap',
   'banana-gun-trading',
+  'helium-network',
 ]);
 
 /**
