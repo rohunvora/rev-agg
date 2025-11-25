@@ -11,6 +11,7 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts';
+import Link from 'next/link';
 
 interface ProtocolData extends ProtocolConfig {
   buyback: BuybackData | null;
@@ -160,6 +161,9 @@ export default function Dashboard() {
                 Evaluate tokens by their buyback yield
               </p>
             </div>
+            <Link href="/simulator" className="text-sm px-3 py-1.5 bg-gray-100 rounded hover:bg-gray-200 no-underline">
+              Simulator →
+            </Link>
             <div className="text-right">
               <button onClick={loadData} disabled={loading} className="text-sm">
                 {loading ? 'Loading...' : 'Refresh'}
