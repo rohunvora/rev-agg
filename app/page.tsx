@@ -282,7 +282,7 @@ export default function Home() {
                     <SortHeader label="MCap" sortKey="marketCap" className="text-right hidden sm:table-cell" />
                     <SortHeader label="Daily Avg" sortKey="dailyAvg" className="text-right" />
                     <SortHeader label="P/E" sortKey="peRatio" className="text-right hidden md:table-cell" />
-                    <SortHeader label="% MCap" sortKey="buybackToMcap" className="text-right hidden sm:table-cell" />
+                    <SortHeader label="% MCap/yr" sortKey="buybackToMcap" className="text-right hidden sm:table-cell" />
                     <SortHeader label="BB 7d" sortKey="buyback7d" className="text-right" />
                     <SortHeader label="Price 7d" sortKey="priceChange7d" className="text-right" />
                   </tr>
