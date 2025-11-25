@@ -72,10 +72,11 @@ export interface ProtocolData extends ProtocolConfig {
   dailyAvg: number;         // 30-day average daily buyback
   buybackToMcap: number;    // Annualized buyback as % of market cap
   buyback7d: number;        // 7d buyback trend %
+  peRatio: number;          // Market Cap / Annual Buybacks (like P/E)
 }
 
 /**
  * Sort options for the leaderboard
  */
-export type SortKey = 'dailyAvg' | 'buybackToMcap' | 'buyback7d' | 'priceChange7d' | 'marketCap';
+export type SortKey = 'dailyAvg' | 'buybackToMcap' | 'buyback7d' | 'priceChange7d' | 'marketCap' | 'peRatio';
 

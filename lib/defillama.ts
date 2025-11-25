@@ -14,7 +14,20 @@ const COINGECKO_API = 'https://api.coingecko.com/api/v3';
 
 // Simple in-memory cache for market data
 let marketDataCache: { data: Record<string, MarketData>; timestamp: number } | null = null;
+let revenueDataCache: { data: RevenueProtocol[]; timestamp: number } | null = null;
 const CACHE_TTL = 30000; // 30 seconds
+
+export interface RevenueProtocol {
+  slug: string;
+  name: string;
+  logo: string;
+  category: string;
+  total24h: number;
+  total7d: number;
+  total30d: number;
+  change7d: number;
+  hasBuyback: boolean;
+}
 
 /**
  * Calculate % change between two periods
@@ -164,5 +177,68 @@ export async function fetchMarketData(geckoIds: string[]): Promise<Record<string
     console.error('Failed to fetch market data:', error);
     // Return cached data if available
     return marketDataCache?.data || {};
+  }
+}
+
+// Slugs of protocols with verified buybacks
+const BUYBACK_SLUGS = new Set([
+  'hyperliquid-perps',
+  'pump.fun',
+  'ore-protocol',
+  'sky-lending',
+  'aave-v3',
+  'raydium-amm',
+  'pancakeswap-amm-v3',
+  'sushiswap',
+  'banana-gun-trading',
+]);
+
+/**
+ * Fetch top revenue protocols from DefiLlama
+ */
+export async function fetchRevenueData(): Promise<RevenueProtocol[]> {
+  // Return cached data if fresh
+  if (revenueDataCache && Date.now() - revenueDataCache.timestamp < CACHE_TTL) {
+    return revenueDataCache.data;
+  }
+  
+  try {
+    const response = await fetchWithRetry(`${DEFILLAMA_API}/overview/fees`);
+    const data = await response.json();
+    
+    if (!data.protocols || !Array.isArray(data.protocols)) {
+      return revenueDataCache?.data || [];
+    }
+    
+    // Filter and sort by 24h revenue
+    const protocols: RevenueProtocol[] = data.protocols
+      .filter((p: any) => p.total24h && p.total24h > 10000) // Min $10k/day
+      .sort((a: any, b: any) => (b.total24h || 0) - (a.total24h || 0))
+      .slice(0, 30)
+      .map((p: any) => {
+        const prev7d = p.total7d ? (p.total7d / 7) : 0;
+        const current = p.total24h || 0;
+        const change7d = prev7d > 0 ? ((current - prev7d) / prev7d) * 100 : 0;
+        
+        return {
+          slug: p.slug || p.name?.toLowerCase().replace(/\s+/g, '-'),
+          name: p.name || 'Unknown',
+          logo: p.logo || '',
+          category: p.category || 'Other',
+          total24h: p.total24h || 0,
+          total7d: p.total7d || 0,
+          total30d: p.total30d || 0,
+          change7d,
+          hasBuyback: BUYBACK_SLUGS.has(p.slug),
+        };
+      });
+    
+    // Update cache
+    revenueDataCache = { data: protocols, timestamp: Date.now() };
+    
+    return protocols;
+  } catch (error) {
+    console.error('Failed to fetch revenue data:', error);
+    return revenueDataCache?.data || [];
   }
 }

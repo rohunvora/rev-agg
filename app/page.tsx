@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { PROTOCOLS } from '@/lib/protocols';
-import { fetchBuybackData, fetchMarketData } from '@/lib/defillama';
+import { fetchBuybackData, fetchMarketData, fetchRevenueData, RevenueProtocol } from '@/lib/defillama';
 import { ProtocolData, SortKey } from '@/lib/types';
 import {
   AreaChart,
@@ -12,6 +12,8 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts';
+
+type ViewMode = 'revenue' | 'buybacks';
 
 function formatUSD(value: number, short = false): string {
   if (!value || value === 0) return '—';
@@ -27,8 +29,14 @@ function formatPct(value: number, showSign = true): string {
   return `${sign}${value.toFixed(1)}%`;
 }
 
-function Rank({ position }: { position: number }) {
-  const cls = position === 1 ? 'rank-1' : position === 2 ? 'rank-2' : position === 3 ? 'rank-3' : 'rank-default';
+function Rank({ position, mode }: { position: number; mode: ViewMode }) {
+  const cls = position === 1 
+    ? (mode === 'revenue' ? 'rank-1-gold' : 'rank-1') 
+    : position === 2 
+    ? 'rank-2' 
+    : position === 3 
+    ? 'rank-3' 
+    : 'rank-default';
   return <span className={`rank ${cls}`}>{position}</span>;
 }
 
@@ -44,7 +52,9 @@ function Pct({ value, showSign = true }: { value: number; showSign?: boolean }) 
 }
 
 export default function Home() {
-  const [data, setData] = useState<ProtocolData[]>([]);
+  const [viewMode, setViewMode] = useState<ViewMode>('buybacks');
+  const [buybackData, setBuybackData] = useState<ProtocolData[]>([]);
+  const [revenueData, setRevenueData] = useState<RevenueProtocol[]>([]);
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [selectedProtocol, setSelectedProtocol] = useState<ProtocolData | null>(null);
@@ -53,15 +63,10 @@ export default function Home() {
   const [flashRows, setFlashRows] = useState<Set<string>>(new Set());
   const prevDataRef = useRef<Map<string, number>>(new Map());
 
-  const loadData = useCallback(async (isInitial = false) => {
-    if (isInitial) setLoading(true);
-    
+  const loadBuybackData = useCallback(async (isInitial = false) => {
     try {
-      // Fetch market data first and wait for it
       const geckoIds = PROTOCOLS.map(p => p.geckoId);
       const marketData = await fetchMarketData(geckoIds);
-      
-      // Check if we got valid market data
       const hasMarketData = Object.keys(marketData).length > 0;
       
       const results = await Promise.all(
@@ -74,6 +79,7 @@ export default function Home() {
           const dailyAvg = buyback?.avg30d || 0;
           const annualized = dailyAvg * 365;
           const buybackToMcap = market.marketCap > 0 ? (annualized / market.marketCap) * 100 : 0;
+          const peRatio = annualized > 0 ? market.marketCap / annualized : 0;
           
           return {
             ...protocol,
@@ -84,15 +90,14 @@ export default function Home() {
             dailyAvg,
             buybackToMcap,
             buyback7d: buyback?.trends.change7d || 0,
+            peRatio,
           };
         })
       );
       
       const filtered = results.filter(p => p.buyback?.total30d && p.buyback.total30d > 0);
       
-      // Only update if we have valid data (either new market data or existing data)
-      if (filtered.length > 0 && (hasMarketData || data.length === 0)) {
-        // Flash detection
+      if (filtered.length > 0 && (hasMarketData || buybackData.length === 0)) {
         const newFlash = new Set<string>();
         for (const p of filtered) {
           const prev = prevDataRef.current.get(p.slug);
@@ -107,29 +112,55 @@ export default function Home() {
           setTimeout(() => setFlashRows(new Set()), 1200);
         }
         
-        setData(filtered);
-        setLastUpdated(new Date());
+        setBuybackData(filtered);
       }
     } catch (error) {
-      console.error('Error loading data:', error);
-    } finally {
-      if (isInitial) setLoading(false);
+      console.error('Error loading buyback data:', error);
     }
-  }, [data.length]);
+  }, [buybackData.length]);
+
+  const loadRevenueData = useCallback(async () => {
+    try {
+      const data = await fetchRevenueData();
+      if (data.length > 0) {
+        setRevenueData(data);
+      }
+    } catch (error) {
+      console.error('Error loading revenue data:', error);
+    }
+  }, []);
+
+  const loadAllData = useCallback(async (isInitial = false) => {
+    if (isInitial) setLoading(true);
+    
+    await Promise.all([
+      loadBuybackData(isInitial),
+      loadRevenueData(),
+    ]);
+    
+    setLastUpdated(new Date());
+    if (isInitial) setLoading(false);
+  }, [loadBuybackData, loadRevenueData]);
 
   useEffect(() => {
-    loadData(true);
-    const interval = setInterval(() => loadData(false), 30000);
+    loadAllData(true);
+    const interval = setInterval(() => loadAllData(false), 30000);
     return () => clearInterval(interval);
-  }, [loadData]);
+  }, [loadAllData]);
 
-  const sortedData = useMemo(() => {
-    return [...data].sort((a, b) => {
+  const sortedBuybackData = useMemo(() => {
+    return [...buybackData].sort((a, b) => {
       const aVal = a[sortBy] ?? 0;
       const bVal = b[sortBy] ?? 0;
       return sortDesc ? bVal - aVal : aVal - bVal;
     });
-  }, [data, sortBy, sortDesc]);
+  }, [buybackData, sortBy, sortDesc]);
+
+  const sortedRevenueData = useMemo(() => {
+    return [...revenueData].sort((a, b) => {
+      return sortDesc ? b.total24h - a.total24h : a.total24h - b.total24h;
+    });
+  }, [revenueData, sortDesc]);
 
   const handleSort = (key: SortKey) => {
     if (sortBy === key) {
@@ -150,17 +181,50 @@ export default function Home() {
     </th>
   );
 
+  const handleTabChange = (mode: ViewMode) => {
+    setViewMode(mode);
+    // Reset sort when switching tabs
+    if (mode === 'revenue') {
+      setSortBy('dailyAvg');
+    } else {
+      setSortBy('dailyAvg');
+    }
+    setSortDesc(true);
+  };
+
   return (
-    <div className="min-h-screen">
+    <div className={`min-h-screen transition-colors duration-500 ${viewMode === 'revenue' ? 'bg-revenue' : 'bg-buyback'}`}>
       {/* Hero */}
       <header className="text-center py-8 sm:py-12 px-4 sm:px-6">
         <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight mb-3 sm:mb-4">
-          Buyback Tracker
+          {viewMode === 'revenue' ? 'Revenue Tracker' : 'Buyback Tracker'}
         </h1>
         <p className="text-base sm:text-lg md:text-xl text-gray-600 max-w-xl mx-auto">
-          Protocols that buy their token from the open market.<br className="hidden sm:block" />
-          <span className="sm:hidden"> </span>Verified buybacks only.
+          {viewMode === 'revenue' 
+            ? 'Top protocols by daily revenue. Who\'s making money?' 
+            : 'Protocols that buy their token from the open market.'}
         </p>
+        
+        {/* Tabs */}
+        <div className="flex justify-center mt-6 sm:mt-8">
+          <div className="inline-flex bg-white rounded-full p-1 shadow-sm border border-gray-200">
+            <button
+              onClick={() => handleTabChange('revenue')}
+              className={`tab-btn ${viewMode === 'revenue' ? 'tab-active-revenue' : ''}`}
+            >
+              <span className="mr-1.5">💰</span>
+              Revenue
+            </button>
+            <button
+              onClick={() => handleTabChange('buybacks')}
+              className={`tab-btn ${viewMode === 'buybacks' ? 'tab-active-buyback' : ''}`}
+            >
+              <span className="mr-1.5">🔄</span>
+              Buybacks
+            </button>
+          </div>
+        </div>
+
         {lastUpdated && (
           <p className="text-xs sm:text-sm text-gray-400 mt-4 sm:mt-6 num">
             Updated {lastUpdated.toLocaleTimeString()}
@@ -172,44 +236,50 @@ export default function Home() {
       <main className="max-w-5xl mx-auto px-3 sm:px-6 pb-12 sm:pb-16">
         {loading ? (
           <div className="text-center py-16 sm:py-20 text-gray-400">Loading...</div>
-        ) : (
+        ) : viewMode === 'buybacks' ? (
+          /* Buybacks Table */
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
             <div className="overflow-x-auto">
-              <table className="leaderboard" style={{ minWidth: 600 }}>
+              <table className="leaderboard" style={{ minWidth: 640 }}>
                 <colgroup>
-                  <col style={{ width: 48 }} />
-                  <col style={{ width: '30%' }} />
-                  <col style={{ width: '18%' }} />
-                  <col style={{ width: '14%' }} className="hidden sm:table-column" />
-                  <col style={{ width: '12%' }} />
-                  <col style={{ width: '12%' }} />
+                  <col style={{ width: 44 }} />
+                  <col style={{ width: '28%' }} />
+                  <col style={{ width: '14%' }} />
+                  <col style={{ width: '10%' }} className="hidden sm:table-column" />
+                  <col style={{ width: '12%' }} className="hidden sm:table-column" />
+                  <col style={{ width: '11%' }} />
+                  <col style={{ width: '11%' }} />
                 </colgroup>
                 <thead>
                   <tr>
                     <th>#</th>
                     <th>Token</th>
                     <SortHeader label="Daily Avg" sortKey="dailyAvg" className="text-right" />
-                    <SortHeader label="% MCap/yr" sortKey="buybackToMcap" className="text-right hidden sm:table-cell" />
+                    <SortHeader label="P/E" sortKey="peRatio" className="text-right hidden sm:table-cell" />
+                    <SortHeader label="% MCap" sortKey="buybackToMcap" className="text-right hidden sm:table-cell" />
                     <SortHeader label="BB 7d" sortKey="buyback7d" className="text-right" />
                     <SortHeader label="Price 7d" sortKey="priceChange7d" className="text-right" />
                   </tr>
                 </thead>
                 <tbody>
-                  {sortedData.map((p, idx) => (
+                  {sortedBuybackData.map((p, idx) => (
                     <tr
                       key={p.slug}
                       onClick={() => setSelectedProtocol(p)}
                       className={flashRows.has(p.slug) ? 'flash' : ''}
                     >
-                      <td><Rank position={idx + 1} /></td>
+                      <td><Rank position={idx + 1} mode="buybacks" /></td>
                       <td>
                         <div className="font-semibold">{p.symbol}</div>
-                        <div className="text-xs text-gray-500 truncate" style={{ maxWidth: 180 }}>
+                        <div className="text-xs text-gray-500 truncate" style={{ maxWidth: 160 }}>
                           {p.buybackSource}
                         </div>
                       </td>
                       <td className="text-right">
                         <span className="num font-medium">{formatUSD(p.dailyAvg, true)}</span>
+                      </td>
+                      <td className="text-right hidden sm:table-cell">
+                        <span className="num">{p.peRatio > 0 ? p.peRatio.toFixed(1) + 'x' : '—'}</span>
                       </td>
                       <td className="text-right hidden sm:table-cell">
                         <span className="num">{p.buybackToMcap.toFixed(1)}%</span>
@@ -226,14 +296,67 @@ export default function Home() {
               </table>
             </div>
           </div>
+        ) : (
+          /* Revenue Table */
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="leaderboard" style={{ minWidth: 600 }}>
+                <colgroup>
+                  <col style={{ width: 48 }} />
+                  <col style={{ width: '35%' }} />
+                  <col style={{ width: '20%' }} />
+                  <col style={{ width: '15%' }} />
+                  <col style={{ width: '15%' }} />
+                </colgroup>
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Protocol</th>
+                    <th className="text-right">Daily Revenue</th>
+                    <th className="text-right">7d Change</th>
+                    <th className="text-right">30d Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {sortedRevenueData.map((p, idx) => (
+                    <tr key={p.slug}>
+                      <td><Rank position={idx + 1} mode="revenue" /></td>
+                      <td>
+                        <div className="flex items-center gap-2">
+                          <div>
+                            <div className="font-semibold flex items-center gap-2">
+                              {p.name}
+                              {p.hasBuyback && (
+                                <span className="buyback-badge">🔄 Buyback</span>
+                              )}
+                            </div>
+                            <div className="text-xs text-gray-500">{p.category}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="text-right">
+                        <span className="num font-medium">{formatUSD(p.total24h, true)}</span>
+                      </td>
+                      <td className="text-right">
+                        <Pct value={p.change7d} />
+                      </td>
+                      <td className="text-right">
+                        <span className="num">{formatUSD(p.total30d, true)}</span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
         )}
 
         <footer className="mt-6 sm:mt-8 text-center text-xs sm:text-sm text-gray-400 px-4">
-          Data from DefiLlama & CoinGecko · Verified buybacks only · Tap row for details
+          Data from DefiLlama & CoinGecko · {viewMode === 'buybacks' ? 'Verified buybacks only · Tap row for details' : 'Top 30 by daily revenue'}
         </footer>
       </main>
 
-      {/* Detail Modal */}
+      {/* Detail Modal (Buybacks only) */}
       {selectedProtocol && (
         <div
           className="fixed inset-0 modal-backdrop flex items-end sm:items-center justify-center p-0 sm:p-4 z-50"
@@ -268,10 +391,14 @@ export default function Home() {
               <div className="text-base sm:text-lg">{selectedProtocol.buybackSource}</div>
             </div>
 
-            <div className="p-4 sm:p-6 grid grid-cols-2 gap-4 sm:gap-6 border-b border-gray-100">
+            <div className="p-4 sm:p-6 grid grid-cols-2 sm:grid-cols-3 gap-4 sm:gap-6 border-b border-gray-100">
               <div>
                 <div className="text-xs sm:text-sm text-gray-500">Daily Avg</div>
                 <div className="text-lg sm:text-xl font-semibold num">{formatUSD(selectedProtocol.dailyAvg)}</div>
+              </div>
+              <div>
+                <div className="text-xs sm:text-sm text-gray-500">P/E Multiple</div>
+                <div className="text-lg sm:text-xl font-semibold num">{selectedProtocol.peRatio > 0 ? selectedProtocol.peRatio.toFixed(1) + 'x' : '—'}</div>
               </div>
               <div>
                 <div className="text-xs sm:text-sm text-gray-500">% of MCap / yr</div>
@@ -284,6 +411,10 @@ export default function Home() {
               <div>
                 <div className="text-xs sm:text-sm text-gray-500">7d Price</div>
                 <div className="text-lg sm:text-xl font-semibold"><Pct value={selectedProtocol.priceChange7d} /></div>
+              </div>
+              <div>
+                <div className="text-xs sm:text-sm text-gray-500">Market Cap</div>
+                <div className="text-lg sm:text-xl font-semibold num">{formatUSD(selectedProtocol.marketCap)}</div>
               </div>
             </div>
 

@@ -170,9 +170,68 @@ body {
 }
 
 .rank-1 { background: #fef3c7; color: #92400e; }
+.rank-1-gold { background: #fbbf24; color: #78350f; }
 .rank-2 { background: #e5e7eb; color: #374151; }
 .rank-3 { background: #fed7aa; color: #9a3412; }
 .rank-default { background: #f3f4f6; color: #6b7280; }
+
+/* View backgrounds */
+.bg-buyback { background: #f8f7f4; }
+.bg-revenue { background: #f7f8fa; }
+
+/* Tabs */
+.tab-btn {
+  padding: 8px 16px;
+  border-radius: 9999px;
+  font-weight: 500;
+  font-size: 14px;
+  color: #666;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+}
+
+@media (max-width: 640px) {
+  .tab-btn {
+    padding: 6px 12px;
+    font-size: 13px;
+  }
+}
+
+.tab-btn:hover {
+  color: #333;
+}
+
+.tab-active-buyback {
+  background: #1a1a1a;
+  color: #fff;
+}
+
+.tab-active-buyback:hover {
+  color: #fff;
+}
+
+.tab-active-revenue {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: #fff;
+}
+
+.tab-active-revenue:hover {
+  color: #fff;
+}
+
+/* Buyback badge */
+.buyback-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 500;
+  background: #ecfdf5;
+  color: #059669;
+  white-space: nowrap;
+}
 
 /* Modal */
 .modal-backdrop {
