@@ -106,24 +106,28 @@ export default function Home() {
             : await fetchBuybackData(protocol.slug);
           
           const market = marketData[protocol.geckoId] || { 
-            price: 0, marketCap: 0, priceChange24h: 0, priceChange7d: 0, priceChange14d: 0, priceChange30d: 0 
+            price: 0, marketCap: 0, volume24h: 0, priceChange24h: 0, priceChange7d: 0, priceChange14d: 0, priceChange30d: 0 
           };
           
           const dailyAvg = buyback?.avg30d || 0;
           const annualized = dailyAvg * 365;
           const buybackToMcap = market.marketCap > 0 ? (annualized / market.marketCap) * 100 : 0;
           const peRatio = annualized > 0 ? market.marketCap / annualized : 0;
+          // Buyback as % of daily trading volume - shows how significant buybacks are
+          const buybackVsVolume = market.volume24h > 0 ? (dailyAvg / market.volume24h) * 100 : 0;
           
           return {
             ...protocol,
             buyback,
             price: market.price,
             marketCap: market.marketCap,
+            volume24h: market.volume24h,
             priceChange7d: market.priceChange7d,
             dailyAvg,
             buybackToMcap,
             buyback7d: buyback?.trends.change7d || 0,
             peRatio,
+            buybackVsVolume,
           };
         })
       );
@@ -341,13 +345,14 @@ export default function Home() {
               <table className="leaderboard" style={{ minWidth: 700 }}>
                 <colgroup>
                   <col style={{ width: 40 }} />
-                  <col style={{ width: '22%' }} />
-                  <col style={{ width: '12%' }} className="hidden sm:table-column" />
-                  <col style={{ width: '12%' }} />
-                  <col style={{ width: '9%' }} className="hidden md:table-column" />
+                  <col style={{ width: '20%' }} />
+                  <col style={{ width: '11%' }} className="hidden sm:table-column" />
+                  <col style={{ width: '11%' }} />
+                  <col style={{ width: '8%' }} className="hidden lg:table-column" />
+                  <col style={{ width: '8%' }} className="hidden md:table-column" />
                   <col style={{ width: '9%' }} className="hidden sm:table-column" />
-                  <col style={{ width: '10%' }} />
-                  <col style={{ width: '10%' }} />
+                  <col style={{ width: '9%' }} />
+                  <col style={{ width: '9%' }} />
                 </colgroup>
                 <thead>
                   <tr>
@@ -355,6 +360,16 @@ export default function Home() {
                     <th>Token</th>
                     <SortHeader label="MCap" sortKey="marketCap" className="text-right hidden sm:table-cell" />
                     <SortHeader label="Daily Avg" sortKey="dailyAvg" className="text-right" />
+                    <th 
+                      className="text-right hidden lg:table-cell sortable cursor-pointer"
+                      onClick={() => handleSort('buybackVsVolume')}
+                      title="Buyback as % of 24h trading volume. Higher = more significant buy pressure relative to market activity."
+                    >
+                      <span className="flex items-center justify-end gap-1">
+                        BB/Vol
+                        {sortBy === 'buybackVsVolume' && <span>{sortDesc ? '↓' : '↑'}</span>}
+                      </span>
+                    </th>
                     <SortHeader label="P/E" sortKey="peRatio" className="text-right hidden md:table-cell" />
                     <SortHeader label="% MCap/yr" sortKey="buybackToMcap" className="text-right hidden sm:table-cell" />
                     <SortHeader label="BB 7d" sortKey="buyback7d" className="text-right" />
@@ -380,6 +395,11 @@ export default function Home() {
                       </td>
                       <td className="text-right">
                         <span className="num font-medium">{formatUSD(p.dailyAvg, true)}</span>
+                      </td>
+                      <td className="text-right hidden lg:table-cell">
+                        <span className={`num ${p.buybackVsVolume >= 1 ? 'text-green-600' : p.buybackVsVolume >= 0.1 ? '' : 'text-gray-400'}`}>
+                          {p.buybackVsVolume > 0 ? p.buybackVsVolume.toFixed(2) + '%' : '—'}
+                        </span>
                       </td>
                       <td className="text-right hidden md:table-cell">
                         <span className={`num ${p.peRatio > 0 && p.peRatio < 10 ? 'pe-low' : p.peRatio >= 30 ? 'pe-high' : ''}`}>
@@ -459,7 +479,10 @@ export default function Home() {
         <footer className="mt-6 sm:mt-8 text-center text-xs sm:text-sm text-gray-400 px-4 space-y-1">
           <div>Data from DefiLlama & CoinGecko · {viewMode === 'buybacks' ? 'Verified buybacks only' : 'Top 30 by daily revenue'} · Tap row for details</div>
           {viewMode === 'buybacks' && (
-            <div className="text-gray-300">P/E: <span className="pe-low text-gray-400">&lt;10x</span> · <span className="pe-high text-gray-400">&gt;30x</span> — lower = more buyback per $ market cap</div>
+            <div className="text-gray-300">
+              P/E: <span className="pe-low text-gray-400">&lt;10x</span> · <span className="pe-high text-gray-400">&gt;30x</span> · 
+              BB/Vol = buyback as % of 24h trading volume
+            </div>
           )}
         </footer>
       </main>
@@ -533,6 +556,12 @@ export default function Home() {
               <div>
                 <div className="text-xs sm:text-sm text-gray-500">Market Cap</div>
                 <div className="text-lg sm:text-xl font-semibold num">{formatUSD(selectedProtocol.marketCap)}</div>
+              </div>
+              <div>
+                <div className="text-xs sm:text-sm text-gray-500" title="Buyback as % of 24h volume">BB/Vol</div>
+                <div className={`text-lg sm:text-xl font-semibold num ${selectedProtocol.buybackVsVolume >= 1 ? 'text-green-600' : ''}`}>
+                  {selectedProtocol.buybackVsVolume > 0 ? selectedProtocol.buybackVsVolume.toFixed(2) + '%' : '—'}
+                </div>
               </div>
             </div>
 

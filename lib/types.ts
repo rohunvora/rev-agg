@@ -58,6 +58,7 @@ export interface BuybackData {
 export interface MarketData {
   price: number;
   marketCap: number;
+  volume24h: number;
   priceChange24h: number;
   priceChange7d: number;
   priceChange14d: number;
@@ -71,15 +72,17 @@ export interface ProtocolData extends ProtocolConfig {
   buyback: BuybackData | null;
   price: number;
   marketCap: number;
+  volume24h: number;
   priceChange7d: number;
   dailyAvg: number;         // 30-day average daily buyback
   buybackToMcap: number;    // Annualized buyback as % of market cap
   buyback7d: number;        // 7d buyback trend %
   peRatio: number;          // Market Cap / Annual Buybacks (like P/E)
+  buybackVsVolume: number;  // Daily buyback as % of 24h trading volume
 }
 
 /**
  * Sort options for the leaderboard
  */
-export type SortKey = 'dailyAvg' | 'buybackToMcap' | 'buyback7d' | 'priceChange7d' | 'marketCap' | 'peRatio';
+export type SortKey = 'dailyAvg' | 'buybackToMcap' | 'buyback7d' | 'priceChange7d' | 'marketCap' | 'peRatio' | 'buybackVsVolume';
 
