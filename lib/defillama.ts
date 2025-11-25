@@ -258,7 +258,6 @@ const BUYBACK_SLUGS = new Set([
   'aave-v3',
   'raydium-amm',
   'pancakeswap-amm-v3',
-  'sushiswap',
   'banana-gun-trading',
   'helium-network',
   'jupiter-perpetual-exchange',

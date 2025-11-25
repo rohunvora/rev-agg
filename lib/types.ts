@@ -9,9 +9,12 @@ export interface ProtocolConfig {
   symbol: string;         // Token symbol
   geckoId: string;        // CoinGecko ID for price data
   buybackSource: string;  // Where buyback funds come from
+  buybackPct: string;     // What % of revenue goes to buybacks
   businessModel: string;  // How the protocol makes money
   growthDrivers: string;  // What could drive growth
   risks: string;          // Key risks to consider
+  notes?: string[];       // Caveats, warnings, disclaimers
+  verifyUrl?: string;     // Link to on-chain proof or dashboard
 }
 
 /**

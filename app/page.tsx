@@ -459,8 +459,16 @@ export default function Home() {
             </div>
 
             <div className="p-4 sm:p-6 bg-gray-50 border-b border-gray-100">
-              <div className="text-xs sm:text-sm text-gray-500 mb-1">Buyback Source</div>
-              <div className="text-base sm:text-lg">{selectedProtocol.buybackSource}</div>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                <div>
+                  <div className="text-xs sm:text-sm text-gray-500 mb-1">Buyback Source</div>
+                  <div className="text-base sm:text-lg">{selectedProtocol.buybackSource}</div>
+                </div>
+                <div className="sm:text-right">
+                  <div className="text-xs sm:text-sm text-gray-500 mb-1">% to Buybacks</div>
+                  <div className="text-base sm:text-lg font-semibold text-green-700">{selectedProtocol.buybackPct}</div>
+                </div>
+              </div>
             </div>
 
             <div className="p-4 sm:p-6 grid grid-cols-2 sm:grid-cols-3 gap-4 sm:gap-6 border-b border-gray-100">
@@ -553,7 +561,7 @@ export default function Home() {
             </div>
 
             {/* Business Info */}
-            <div className="p-4 sm:p-6 space-y-4 text-sm">
+            <div className="p-4 sm:p-6 space-y-4 text-sm border-b border-gray-100">
               <div>
                 <div className="text-gray-500 mb-1">Business Model</div>
                 <div className="text-gray-700">{selectedProtocol.businessModel}</div>
@@ -562,6 +570,35 @@ export default function Home() {
                 <div className="text-gray-500 mb-1">Risks</div>
                 <div className="text-gray-700">{selectedProtocol.risks}</div>
               </div>
+            </div>
+
+            {/* Notes/Caveats */}
+            {selectedProtocol.notes && selectedProtocol.notes.length > 0 && (
+              <div className="p-4 sm:p-6 bg-amber-50 border-b border-amber-100">
+                <div className="text-xs sm:text-sm text-amber-700 font-medium mb-2">⚠️ Notes</div>
+                <ul className="text-xs sm:text-sm text-amber-800 space-y-1">
+                  {selectedProtocol.notes.map((note, i) => (
+                    <li key={i}>• {note}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* Verify Link */}
+            <div className="p-4 sm:p-6">
+              {selectedProtocol.verifyUrl ? (
+                <a
+                  href={selectedProtocol.verifyUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700 transition-colors"
+                >
+                  <span>🔍</span>
+                  <span>Verify on-chain →</span>
+                </a>
+              ) : (
+                <span className="text-xs text-gray-400">No verification link available</span>
+              )}
             </div>
 
             {/* Bottom safe area for mobile */}
