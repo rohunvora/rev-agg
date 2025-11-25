@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { PROTOCOLS } from '@/lib/protocols';
-import { fetchBuybackData, fetchMarketData, fetchRevenueData, fetchRevenueDetail, RevenueProtocol, RevenueDetail } from '@/lib/defillama';
+import { fetchBuybackData, fetchJupiterCombinedData, fetchMarketData, fetchRevenueData, fetchRevenueDetail, RevenueProtocol, RevenueDetail } from '@/lib/defillama';
 import { ProtocolData, SortKey } from '@/lib/types';
 import {
   AreaChart,
@@ -75,7 +75,11 @@ export default function Home() {
       
       const results = await Promise.all(
         PROTOCOLS.map(async (protocol) => {
-          const buyback = await fetchBuybackData(protocol.slug);
+          // Jupiter combines perps + aggregator data
+          const buyback = protocol.slug === 'jupiter-perps'
+            ? await fetchJupiterCombinedData()
+            : await fetchBuybackData(protocol.slug);
+          
           const market = marketData[protocol.geckoId] || { 
             price: 0, marketCap: 0, priceChange24h: 0, priceChange7d: 0, priceChange14d: 0, priceChange30d: 0 
           };

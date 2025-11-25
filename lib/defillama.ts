@@ -146,6 +146,58 @@ export async function fetchBuybackData(slug: string): Promise<BuybackData | null
 }
 
 /**
+ * Fetch combined buyback data for Jupiter (perps + aggregator)
+ */
+export async function fetchJupiterCombinedData(): Promise<BuybackData | null> {
+  try {
+    const [perpsData, aggData] = await Promise.all([
+      fetchBuybackData('jupiter-perpetual-exchange'),
+      fetchBuybackData('jupiter-aggregator'),
+    ]);
+    
+    if (!perpsData && !aggData) return null;
+    
+    const p = perpsData || { total24h: 0, total7d: 0, total30d: 0, totalAllTime: 0, dailyChart: [], trends: { change24h: 0, change7d: 0, change14d: 0, change30d: 0, change90d: 0 }, avg24h: 0, avg7d: 0, avg30d: 0 };
+    const a = aggData || { total24h: 0, total7d: 0, total30d: 0, totalAllTime: 0, dailyChart: [], trends: { change24h: 0, change7d: 0, change14d: 0, change30d: 0, change90d: 0 }, avg24h: 0, avg7d: 0, avg30d: 0 };
+    
+    // Combine daily charts (use perps as base, longer history)
+    const combinedChart = p.dailyChart.map(day => {
+      const aggDay = a.dailyChart.find(d => d.date === day.date);
+      return {
+        ...day,
+        value: day.value + (aggDay?.value || 0),
+      };
+    });
+    
+    // Weighted average for trend calculation
+    const total7d = p.total7d + a.total7d;
+    const weightP = total7d > 0 ? p.total7d / total7d : 0.5;
+    const weightA = total7d > 0 ? a.total7d / total7d : 0.5;
+    
+    return {
+      total24h: p.total24h + a.total24h,
+      total7d: p.total7d + a.total7d,
+      total30d: p.total30d + a.total30d,
+      totalAllTime: p.totalAllTime + a.totalAllTime,
+      dailyChart: combinedChart,
+      trends: {
+        change24h: p.trends.change24h * weightP + a.trends.change24h * weightA,
+        change7d: p.trends.change7d * weightP + a.trends.change7d * weightA,
+        change14d: p.trends.change14d * weightP + a.trends.change14d * weightA,
+        change30d: p.trends.change30d * weightP + a.trends.change30d * weightA,
+        change90d: p.trends.change90d * weightP + a.trends.change90d * weightA,
+      },
+      avg24h: p.avg24h + a.avg24h,
+      avg7d: p.avg7d + a.avg7d,
+      avg30d: p.avg30d + a.avg30d,
+    };
+  } catch (error) {
+    console.error('Failed to fetch combined Jupiter data:', error);
+    return null;
+  }
+}
+
+/**
  * Fetch market data from CoinGecko for multiple tokens
  * Uses in-memory cache to avoid rate limits
  */
@@ -197,7 +249,7 @@ export async function fetchMarketData(geckoIds: string[]): Promise<Record<string
   }
 }
 
-// Slugs of protocols with verified buybacks
+// Slugs of protocols with verified buybacks (for Revenue tab badge)
 const BUYBACK_SLUGS = new Set([
   'hyperliquid-perps',
   'pump.fun',
@@ -209,7 +261,16 @@ const BUYBACK_SLUGS = new Set([
   'sushiswap',
   'banana-gun-trading',
   'helium-network',
+  'jupiter-perpetual-exchange',
+  'jupiter-aggregator',
+  'letsbonk.fun',
+  'apex-omni',
+  'graphite-protocol',
+  'launch-coin-on-believe',
 ]);
+
+// Jupiter has multiple revenue sources that should be combined
+const JUPITER_SLUGS = ['jupiter-perpetual-exchange', 'jupiter-aggregator'];
 
 /**
  * Fetch top revenue protocols from DefiLlama
