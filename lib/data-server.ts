@@ -173,6 +173,7 @@ const BUYBACK_SLUGS = new Set([
   'apex-omni',
   'graphite-protocol',
   'launch-coin-on-believe',
+  'clanker',
 ]);
 
 /**

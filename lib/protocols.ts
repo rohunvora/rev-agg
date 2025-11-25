@@ -192,6 +192,19 @@ export const PROTOCOLS: ProtocolConfig[] = [
     notes: ['Very low volume currently', 'Exact buyback % unclear'],
     verifyUrl: 'https://believe.app/',
   },
+  {
+    slug: 'clanker',
+    name: 'Clanker',
+    symbol: 'CLANKER',
+    geckoId: 'tokenbot-2',
+    buybackSource: 'Token launch + LP fees',
+    buybackPct: '100% of protocol fees',
+    businessModel: 'AI agent that auto-deploys meme tokens on Base via Farcaster. All protocol fees used to buy and hold/burn CLANKER.',
+    growthDrivers: 'Base ecosystem, Farcaster growth, AI agent hype',
+    risks: 'Launchpad competition, Base ecosystem dependency, meme fatigue',
+    notes: ['~7% of supply permanently locked from buybacks', 'Weekly buybacks ~$400-500K at peak'],
+    verifyUrl: 'https://www.clanker.world/',
+  },
 ];
 
 /**
