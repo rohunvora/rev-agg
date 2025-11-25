@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { PROTOCOLS } from '@/lib/protocols';
-import { fetchBuybackData, fetchMarketData, fetchRevenueData, RevenueProtocol } from '@/lib/defillama';
+import { fetchBuybackData, fetchMarketData, fetchRevenueData, fetchRevenueDetail, RevenueProtocol, RevenueDetail } from '@/lib/defillama';
 import { ProtocolData, SortKey } from '@/lib/types';
 import {
   AreaChart,
@@ -58,6 +58,8 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [selectedProtocol, setSelectedProtocol] = useState<ProtocolData | null>(null);
+  const [selectedRevenue, setSelectedRevenue] = useState<RevenueDetail | null>(null);
+  const [loadingRevDetail, setLoadingRevDetail] = useState(false);
   const [sortBy, setSortBy] = useState<SortKey>('dailyAvg');
   const [sortDesc, setSortDesc] = useState(true);
   const [revSortBy, setRevSortBy] = useState<'total24h' | 'change7d' | 'total30d'>('total24h');
@@ -203,6 +205,15 @@ export default function Home() {
       {label}
     </th>
   );
+
+  const handleRevenueClick = async (protocol: RevenueProtocol) => {
+    setLoadingRevDetail(true);
+    const detail = await fetchRevenueDetail(protocol.slug);
+    if (detail) {
+      setSelectedRevenue(detail);
+    }
+    setLoadingRevDetail(false);
+  };
 
   const handleTabChange = (mode: ViewMode) => {
     setViewMode(mode);
@@ -371,7 +382,7 @@ export default function Home() {
                 </thead>
                 <tbody>
                   {sortedRevenueData.map((p, idx) => (
-                    <tr key={p.slug}>
+                    <tr key={p.slug} onClick={() => handleRevenueClick(p)}>
                       <td><Rank position={idx + 1} mode="revenue" /></td>
                       <td>
                         <div className="flex items-center gap-2">
@@ -404,7 +415,7 @@ export default function Home() {
         )}
 
         <footer className="mt-6 sm:mt-8 text-center text-xs sm:text-sm text-gray-400 px-4">
-          Data from DefiLlama & CoinGecko · {viewMode === 'buybacks' ? 'Verified buybacks only · Tap row for details' : 'Top 30 by daily revenue'}
+          Data from DefiLlama & CoinGecko · {viewMode === 'buybacks' ? 'Verified buybacks only' : 'Top 30 by daily revenue'} · Tap row for details
         </footer>
       </main>
 
@@ -544,6 +555,125 @@ export default function Home() {
 
             {/* Bottom safe area for mobile */}
             <div className="h-6 sm:hidden"></div>
+          </div>
+        </div>
+      )}
+
+      {/* Revenue Detail Modal */}
+      {selectedRevenue && (
+        <div
+          className="fixed inset-0 modal-backdrop flex items-end sm:items-center justify-center p-0 sm:p-4 z-50"
+          onClick={() => setSelectedRevenue(null)}
+        >
+          <div
+            className="bg-white rounded-t-2xl sm:rounded-xl w-full sm:max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Handle bar for mobile */}
+            <div className="sm:hidden flex justify-center pt-3 pb-1">
+              <div className="w-10 h-1 bg-gray-300 rounded-full"></div>
+            </div>
+
+            <div className="p-4 sm:p-6 border-b border-gray-100">
+              <div className="flex justify-between items-start">
+                <div>
+                  <h2 className="text-xl sm:text-2xl font-bold flex items-center gap-2">
+                    {selectedRevenue.name}
+                    {selectedRevenue.hasBuyback && (
+                      <span className="buyback-badge text-xs">🔄 Buyback</span>
+                    )}
+                  </h2>
+                  <p className="text-gray-500 text-sm sm:text-base">{selectedRevenue.category}</p>
+                </div>
+                <button
+                  onClick={() => setSelectedRevenue(null)}
+                  className="text-gray-400 hover:text-gray-600 text-2xl leading-none p-2 -mr-2"
+                >
+                  ×
+                </button>
+              </div>
+            </div>
+
+            <div className="p-4 sm:p-6 grid grid-cols-2 sm:grid-cols-3 gap-4 sm:gap-6 border-b border-gray-100">
+              <div>
+                <div className="text-xs sm:text-sm text-gray-500">Daily Revenue</div>
+                <div className="text-lg sm:text-xl font-semibold num">{formatUSD(selectedRevenue.total24h)}</div>
+              </div>
+              <div>
+                <div className="text-xs sm:text-sm text-gray-500">7d Total</div>
+                <div className="text-lg sm:text-xl font-semibold num">{formatUSD(selectedRevenue.total7d)}</div>
+              </div>
+              <div>
+                <div className="text-xs sm:text-sm text-gray-500">30d Total</div>
+                <div className="text-lg sm:text-xl font-semibold num">{formatUSD(selectedRevenue.total30d)}</div>
+              </div>
+              <div>
+                <div className="text-xs sm:text-sm text-gray-500">7d Change</div>
+                <div className="text-lg sm:text-xl font-semibold"><Pct value={selectedRevenue.change7d} /></div>
+              </div>
+              <div>
+                <div className="text-xs sm:text-sm text-gray-500">30d Change</div>
+                <div className="text-lg sm:text-xl font-semibold"><Pct value={selectedRevenue.change30d} /></div>
+              </div>
+              <div>
+                <div className="text-xs sm:text-sm text-gray-500">All Time</div>
+                <div className="text-lg sm:text-xl font-semibold num">{formatUSD(selectedRevenue.totalAllTime)}</div>
+              </div>
+            </div>
+
+            {/* Chart */}
+            <div className="p-4 sm:p-6">
+              <div className="text-xs sm:text-sm text-gray-500 mb-3">Daily Revenue (90 days)</div>
+              {selectedRevenue.dailyChart && selectedRevenue.dailyChart.length > 0 ? (
+                <div style={{ height: 160 }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={selectedRevenue.dailyChart}>
+                      <defs>
+                        <linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#f59e0b" stopOpacity={0.3}/>
+                          <stop offset="100%" stopColor="#f59e0b" stopOpacity={0}/>
+                        </linearGradient>
+                      </defs>
+                      <XAxis
+                        dataKey="date"
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{ fill: '#999', fontSize: 9 }}
+                        tickFormatter={(v) => v.slice(5)}
+                        interval="preserveStartEnd"
+                      />
+                      <YAxis
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{ fill: '#999', fontSize: 9 }}
+                        tickFormatter={(v) => v >= 1e6 ? `${(v/1e6).toFixed(1)}M` : `${(v/1e3).toFixed(0)}K`}
+                        width={45}
+                      />
+                      <Tooltip
+                        contentStyle={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 11 }}
+                        formatter={(value: number) => [formatUSD(value), 'Revenue']}
+                      />
+                      <Area type="monotone" dataKey="value" stroke="#f59e0b" strokeWidth={2} fill="url(#revGrad)" />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              ) : (
+                <div className="text-center py-6 text-gray-400 text-sm">No chart data</div>
+              )}
+            </div>
+
+            {/* Bottom safe area for mobile */}
+            <div className="h-6 sm:hidden"></div>
+          </div>
+        </div>
+      )}
+
+      {/* Loading overlay for revenue detail */}
+      {loadingRevDetail && (
+        <div className="fixed inset-0 bg-black/20 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-4 shadow-lg flex items-center gap-3">
+            <div className="loading-spinner"></div>
+            <span className="text-sm text-gray-600">Loading details...</span>
           </div>
         </div>
       )}

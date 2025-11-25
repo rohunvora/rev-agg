@@ -29,6 +29,20 @@ export interface RevenueProtocol {
   hasBuyback: boolean;
 }
 
+export interface RevenueDetail {
+  slug: string;
+  name: string;
+  category: string;
+  total24h: number;
+  total7d: number;
+  total30d: number;
+  totalAllTime: number;
+  change7d: number;
+  change30d: number;
+  dailyChart: DailyDataPoint[];
+  hasBuyback: boolean;
+}
+
 /**
  * Calculate % change between two periods
  */
@@ -240,5 +254,58 @@ export async function fetchRevenueData(): Promise<RevenueProtocol[]> {
   } catch (error) {
     console.error('Failed to fetch revenue data:', error);
     return revenueDataCache?.data || [];
+  }
+}
+
+/**
+ * Fetch detailed revenue data for a single protocol
+ */
+export async function fetchRevenueDetail(slug: string): Promise<RevenueDetail | null> {
+  try {
+    const response = await fetchWithRetry(
+      `${DEFILLAMA_API}/summary/fees/${slug}`
+    );
+    
+    const data = await response.json();
+    
+    const dailyChart: DailyDataPoint[] = [];
+    const rawChart = data.totalDataChart || [];
+    
+    for (const [timestamp, value] of rawChart) {
+      dailyChart.push({
+        timestamp,
+        date: new Date(timestamp * 1000).toISOString().split('T')[0],
+        value: value || 0,
+      });
+    }
+    
+    // Calculate sums and changes
+    const sum = (arr: DailyDataPoint[]) => arr.reduce((s, d) => s + d.value, 0);
+    const last7d = dailyChart.slice(-7);
+    const last30d = dailyChart.slice(-30);
+    const prior7d = dailyChart.slice(-14, -7);
+    const prior30d = dailyChart.slice(-60, -30);
+    
+    const sum7d = sum(last7d);
+    const sum30d = sum(last30d);
+    const sumPrior7d = sum(prior7d);
+    const sumPrior30d = sum(prior30d);
+    
+    return {
+      slug,
+      name: data.name || slug,
+      category: data.category || 'Other',
+      total24h: data.total24h || 0,
+      total7d: sum7d,
+      total30d: sum30d,
+      totalAllTime: data.totalAllTime || 0,
+      change7d: calcChange(sum7d, sumPrior7d),
+      change30d: calcChange(sum30d, sumPrior30d),
+      dailyChart: dailyChart.slice(-90),
+      hasBuyback: BUYBACK_SLUGS.has(slug),
+    };
+  } catch (error) {
+    console.error(`Failed to fetch revenue detail for ${slug}:`, error);
+    return null;
   }
 }
