@@ -261,11 +261,11 @@ export default function Home() {
 
   return (
     <div className={`min-h-screen transition-colors duration-200 ${viewMode === 'revenue' ? 'bg-revenue' : 'bg-buyback'}`}>
-      {/* Theme Toggle */}
-      <div className="absolute top-4 right-4 z-10">
+      {/* Theme Toggle - fixed position on mobile */}
+      <div className="fixed sm:absolute top-3 right-3 sm:top-4 sm:right-4 z-20">
         <button
           onClick={toggleDarkMode}
-          className="theme-toggle"
+          className="theme-toggle shadow-lg sm:shadow-none"
           aria-label="Toggle dark mode"
         >
           {darkMode ? '☀️' : '🌙'}
@@ -273,7 +273,7 @@ export default function Home() {
       </div>
 
       {/* Hero */}
-      <header className="text-center py-8 sm:py-12 px-4 sm:px-6">
+      <header className="text-center pt-6 pb-6 sm:py-12 px-4 sm:px-6">
         <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight mb-3 sm:mb-4">
           {viewMode === 'revenue' ? 'Revenue Tracker' : 'Buyback Tracker'}
         </h1>
@@ -385,8 +385,8 @@ export default function Home() {
                     >
                       <td><Rank position={idx + 1} mode="buybacks" /></td>
                       <td>
-                        <div className="font-semibold">{p.symbol}</div>
-                        <div className="text-xs text-gray-500 truncate" style={{ maxWidth: 140 }}>
+                        <div className="font-semibold text-sm sm:text-base">{p.symbol}</div>
+                        <div className="text-xs text-gray-500 truncate max-w-[100px] sm:max-w-[140px]">
                           {p.buybackSource}
                         </div>
                       </td>
@@ -394,7 +394,7 @@ export default function Home() {
                         <span className="num">{formatUSD(p.marketCap, true)}</span>
                       </td>
                       <td className="text-right">
-                        <span className="num font-medium">{formatUSD(p.dailyAvg, true)}</span>
+                        <span className="num font-medium text-sm sm:text-base">{formatUSD(p.dailyAvg, true)}</span>
                       </td>
                       <td className="text-right hidden lg:table-cell">
                         <span className={`num ${p.buybackVsVolume >= 1 ? 'text-green-600' : p.buybackVsVolume >= 0.1 ? '' : 'text-gray-400'}`}>
@@ -476,12 +476,13 @@ export default function Home() {
           </div>
         )}
 
-        <footer className="mt-6 sm:mt-8 text-center text-xs sm:text-sm text-gray-400 px-4 space-y-1">
-          <div>Data from DefiLlama & CoinGecko · {viewMode === 'buybacks' ? 'Verified buybacks only' : 'Top 30 by daily revenue'} · Tap row for details</div>
+        <footer className="mt-6 sm:mt-8 text-center text-xs sm:text-sm text-gray-400 px-4 space-y-1 pb-6 sm:pb-4" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 1.5rem)' }}>
+          <div>Data from DefiLlama & CoinGecko · {viewMode === 'buybacks' ? 'Verified buybacks only' : 'Top 30 by daily revenue'}</div>
+          <div className="text-gray-300 hidden sm:block">Tap row for details</div>
           {viewMode === 'buybacks' && (
-            <div className="text-gray-300">
+            <div className="text-gray-300 hidden sm:block">
               P/E: <span className="pe-low text-gray-400">&lt;10x</span> · <span className="pe-high text-gray-400">&gt;30x</span> · 
-              BB/Vol = buyback as % of 24h trading volume
+              BB/Vol = buyback as % of 24h volume
             </div>
           )}
         </footer>
@@ -494,12 +495,12 @@ export default function Home() {
           onClick={() => setSelectedProtocol(null)}
         >
           <div
-            className="bg-white rounded-t-2xl sm:rounded-xl w-full sm:max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl"
+            className="modal-content bg-white rounded-t-2xl sm:rounded-xl w-full sm:max-w-2xl max-h-[85vh] sm:max-h-[90vh] overflow-y-auto shadow-2xl overscroll-contain"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Handle bar for mobile */}
-            <div className="sm:hidden flex justify-center pt-3 pb-1">
-              <div className="w-10 h-1 bg-gray-300 rounded-full"></div>
+            <div className="sm:hidden flex justify-center pt-3 pb-2 sticky top-0 bg-white z-10">
+              <div className="drag-handle"></div>
             </div>
 
             <div className="p-4 sm:p-6 border-b border-gray-100">
@@ -679,12 +680,12 @@ export default function Home() {
           onClick={() => setSelectedRevenue(null)}
         >
           <div
-            className="bg-white rounded-t-2xl sm:rounded-xl w-full sm:max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl"
+            className="modal-content bg-white rounded-t-2xl sm:rounded-xl w-full sm:max-w-2xl max-h-[85vh] sm:max-h-[90vh] overflow-y-auto shadow-2xl overscroll-contain"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Handle bar for mobile */}
-            <div className="sm:hidden flex justify-center pt-3 pb-1">
-              <div className="w-10 h-1 bg-gray-300 rounded-full"></div>
+            <div className="sm:hidden flex justify-center pt-3 pb-2 sticky top-0 bg-white z-10">
+              <div className="drag-handle"></div>
             </div>
 
             <div className="p-4 sm:p-6 border-b border-gray-100">
