@@ -1,63 +1,84 @@
 # Buyback Tracker
 
-A real-time dashboard that aggregates cryptocurrency tokens with buyback programs and visualizes their buyback rates relative to market cap.
+A real-time leaderboard tracking crypto tokens with active buyback programs.
 
-## Features
+**Live:** [rev-agg.vercel.app](https://rev-agg.vercel.app)
 
-- **Live Overview**: Track total annual buybacks, average rates, and cumulative buyback data across all protocols
-- **Interactive Charts**: Monthly buyback volume trends, rate comparisons, and category distribution
-- **Protocol Cards**: Detailed cards showing buyback rate, annual volume, market cap, and mechanism type
-- **Advanced Filtering**: Search, sort, and filter by buyback mechanism type
-- **Detailed Modal View**: Click any protocol for monthly activity charts and comprehensive stats
+## What It Does
 
-## Tracked Protocols
+Tracks which tokens are buying themselves back and how much:
+- **Daily Buyback** — Average daily buyback in USD
+- **% of MCap** — Annualized buyback as percentage of market cap
+- **7d Trend** — Whether buybacks are increasing or decreasing
+- **Price 7d** — Price movement for comparison
 
-The dashboard currently tracks 12 major protocols with active buyback programs:
+Click any row to see detailed stats, charts, and business model info.
 
-| Protocol | Symbol | Buyback Rate | Mechanism |
-|----------|--------|--------------|-----------|
-| Hyperliquid | HYPE | 12.39% | Buyback + Burn |
-| PancakeSwap | CAKE | 21.32% | Buyback + Burn |
-| GMX | GMX | 8.42% | Buyback + Distribute |
-| Raydium | RAY | 7.5% | Buyback + Burn |
-| Maker | MKR | 5.3% | Buyback + Burn |
-| Synthetix | SNX | 2.88% | Buyback + Burn |
-| Pendle | PENDLE | 2.68% | Buyback + Distribute |
-| Lido | LDO | 2.0% | Buyback |
-| Jupiter | JUP | 1.98% | Buyback |
-| dYdX | DYDX | 1.57% | Buyback + Distribute |
-| BNB | BNB | 1.28% | Buyback + Burn |
-| Aave | AAVE | 0.96% | Buyback + Distribute |
+## Data Sources
 
-## Getting Started
+- **DefiLlama** — Buyback/revenue data via `dailyHoldersRevenue`
+- **CoinGecko** — Price and market cap data
+
+Data refreshes every 30 seconds.
+
+## Tech Stack
+
+- **Next.js 14** — App Router
+- **TypeScript** — Type safety
+- **Tailwind CSS** — Styling
+- **Recharts** — Charts
+- **Vercel** — Hosting
+
+## Development
 
 ```bash
 # Install dependencies
 npm install
 
-# Start development server
+# Start dev server
 npm run dev
+
+# Type check
+npm run type-check
+
+# Build for production
+npm run build
 ```
 
-Open [http://localhost:3000](http://localhost:3000) to view the dashboard.
+## Project Structure
 
-## Tech Stack
+```
+├── app/
+│   ├── page.tsx           # Main leaderboard page
+│   ├── layout.tsx         # Root layout + meta tags
+│   ├── globals.css        # Global styles
+│   ├── opengraph-image.tsx # OG image generation
+│   └── twitter-image.tsx   # Twitter card image
+├── lib/
+│   ├── types.ts           # Shared TypeScript types
+│   ├── protocols.ts       # Protocol configurations
+│   └── defillama.ts       # Data fetching functions
+```
 
-- **Framework**: Next.js 14 with App Router
-- **Styling**: Tailwind CSS
-- **Charts**: Recharts
-- **Icons**: Lucide React
-- **Language**: TypeScript
+## Adding a New Protocol
 
-## Data Sources
+1. Find the protocol on DefiLlama and get its slug
+2. Find the token on CoinGecko and get its ID
+3. Add entry to `lib/protocols.ts`:
 
-Data is aggregated from:
-- Protocol documentation and governance proposals
-- On-chain transaction data
-- DefiLlama and Token Terminal
-- Official announcements
+```typescript
+{
+  slug: 'protocol-slug',      // DefiLlama slug
+  name: 'Protocol Name',
+  symbol: 'TOKEN',
+  geckoId: 'coingecko-id',    // CoinGecko ID
+  buybackSource: 'Where buyback funds come from',
+  businessModel: 'How the protocol makes money',
+  growthDrivers: 'What could drive growth',
+  risks: 'Key risks to consider',
+}
+```
 
----
+## License
 
-Built with 🔥 for the crypto community
-
+MIT

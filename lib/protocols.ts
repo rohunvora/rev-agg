@@ -1,19 +1,15 @@
-// Protocol configurations with buyback source explanations
+/**
+ * Protocol configurations with buyback source explanations
+ * 
+ * To add a new protocol:
+ * 1. Add entry to PROTOCOLS array below
+ * 2. Ensure the slug matches DefiLlama's protocol slug
+ * 3. Ensure the geckoId matches CoinGecko's coin ID
+ */
 
-export interface ProtocolConfig {
-  slug: string;
-  name: string;
-  symbol: string;
-  geckoId: string;
-  // What is the source of buyback funds?
-  buybackSource: string;
-  // Detailed explanation of the business model
-  businessModel: string;
-  // What could make this grow?
-  growthDrivers: string;
-  // What are the risks?
-  risks: string;
-}
+import { ProtocolConfig } from './types';
+
+export type { ProtocolConfig };
 
 export const PROTOCOLS: ProtocolConfig[] = [
   {
@@ -218,13 +214,16 @@ export const PROTOCOLS: ProtocolConfig[] = [
   },
 ];
 
-// Get protocol by slug
+/**
+ * Get protocol by slug
+ */
 export function getProtocol(slug: string): ProtocolConfig | undefined {
   return PROTOCOLS.find(p => p.slug === slug);
 }
 
-// Get all gecko IDs for price fetching
+/**
+ * Get all CoinGecko IDs for batch price fetching
+ */
 export function getAllGeckoIds(): string[] {
   return PROTOCOLS.map(p => p.geckoId).filter(Boolean);
 }
-

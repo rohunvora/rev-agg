@@ -1,437 +1,353 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
-import { PROTOCOLS, ProtocolConfig } from '@/lib/protocols';
-import { fetchBuybackData, fetchMarketData, BuybackData } from '@/lib/defillama';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { PROTOCOLS } from '@/lib/protocols';
+import { fetchBuybackData, fetchMarketData } from '@/lib/defillama';
+import { ProtocolData, SortKey } from '@/lib/types';
 import {
-  BarChart,
-  Bar,
+  AreaChart,
+  Area,
   XAxis,
   YAxis,
   Tooltip,
   ResponsiveContainer,
 } from 'recharts';
-import Link from 'next/link';
 
-interface ProtocolData extends ProtocolConfig {
-  buyback: BuybackData | null;
-  price: number;
-  marketCap: number;
-  priceChange24h: number;
-  // Calculated metrics
-  hourlyAvg: number;
-  dailyAvg: number;
-  weeklyAvg: number;
-  annualized: number;
-  peRatio: number | null; // null if no buyback
-  trend: number; // % change in buyback (recent vs prior)
-}
-
-function formatUSD(value: number): string {
+function formatUSD(value: number, short = false): string {
   if (!value || value === 0) return '—';
-  if (value >= 1e9) return `$${(value / 1e9).toFixed(2)}B`;
-  if (value >= 1e6) return `$${(value / 1e6).toFixed(2)}M`;
-  if (value >= 1e3) return `$${(value / 1e3).toFixed(0)}K`;
+  if (value >= 1e9) return `$${(value / 1e9).toFixed(short ? 1 : 2)}B`;
+  if (value >= 1e6) return `$${(value / 1e6).toFixed(short ? 1 : 2)}M`;
+  if (value >= 1e3) return `$${(value / 1e3).toFixed(short ? 0 : 1)}K`;
   return `$${value.toFixed(0)}`;
 }
 
-function formatNumber(value: number, decimals = 1): string {
-  if (!value || value === 0) return '—';
-  return value.toFixed(decimals);
+function formatPct(value: number, showSign = true): string {
+  if (value === 0 || isNaN(value) || !isFinite(value)) return '—';
+  const sign = showSign && value > 0 ? '+' : '';
+  return `${sign}${value.toFixed(1)}%`;
 }
 
-function getPERating(pe: number | null): { label: string; class: string } {
-  if (pe === null || pe <= 0) return { label: '—', class: 'muted' };
-  if (pe < 10) return { label: `${pe.toFixed(1)}x`, class: 'pe-cheap' };
-  if (pe < 25) return { label: `${pe.toFixed(1)}x`, class: 'pe-fair' };
-  if (pe < 50) return { label: `${pe.toFixed(1)}x`, class: '' };
-  return { label: `${pe.toFixed(0)}x`, class: 'pe-expensive' };
+function Rank({ position }: { position: number }) {
+  const cls = position === 1 ? 'rank-1' : position === 2 ? 'rank-2' : position === 3 ? 'rank-3' : 'rank-default';
+  return <span className={`rank ${cls}`}>{position}</span>;
 }
 
-type SortKey = 'peRatio' | 'dailyAvg' | 'marketCap' | 'annualized';
+function Pct({ value, showSign = true }: { value: number; showSign?: boolean }) {
+  const isPos = value > 0;
+  const isNeg = value < 0;
+  
+  return (
+    <span className={`num ${isPos ? 'positive' : isNeg ? 'negative' : 'muted'}`}>
+      {formatPct(value, showSign)}
+    </span>
+  );
+}
 
-export default function Dashboard() {
+export default function Home() {
   const [data, setData] = useState<ProtocolData[]>([]);
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [selectedProtocol, setSelectedProtocol] = useState<ProtocolData | null>(null);
   const [sortBy, setSortBy] = useState<SortKey>('dailyAvg');
-  const [sortAsc, setSortAsc] = useState(false);
+  const [sortDesc, setSortDesc] = useState(true);
+  const [flashRows, setFlashRows] = useState<Set<string>>(new Set());
+  const prevDataRef = useRef<Map<string, number>>(new Map());
 
-  const loadData = useCallback(async () => {
-    setLoading(true);
+  const loadData = useCallback(async (isInitial = false) => {
+    if (isInitial) setLoading(true);
     
-    // Fetch market data
     const geckoIds = PROTOCOLS.map(p => p.geckoId);
     const marketData = await fetchMarketData(geckoIds);
     
-    // Fetch buyback data for all protocols in parallel
     const results = await Promise.all(
       PROTOCOLS.map(async (protocol) => {
         const buyback = await fetchBuybackData(protocol.slug);
-        const market = marketData[protocol.geckoId] || { price: 0, marketCap: 0, priceChange24h: 0 };
+        const market = marketData[protocol.geckoId] || { 
+          price: 0, marketCap: 0, priceChange24h: 0, priceChange7d: 0, priceChange14d: 0, priceChange30d: 0 
+        };
         
-        // Calculate metrics
-        const total30d = buyback?.total30d || 0;
-        const total7d = buyback?.total7d || 0;
-        
-        const dailyAvg = total30d / 30;
-        const hourlyAvg = dailyAvg / 24;
-        const weeklyAvg = total30d / 4.3;
-        const annualized = total30d * 12;
-        
-        // P/E = Market Cap / Annualized Buyback
-        const peRatio = annualized > 0 && market.marketCap > 0 
-          ? market.marketCap / annualized 
-          : null;
-        
-        // Trend: compare last 7d to prior 7d (rough approximation)
-        const prior7d = total30d > 0 ? (total30d - total7d) / 3.3 : 0; // ~23 days / 3.3 weeks
-        const trend = prior7d > 0 ? ((total7d - prior7d) / prior7d) * 100 : 0;
+        const dailyAvg = buyback?.avg30d || 0;
+        const annualized = dailyAvg * 365;
+        const buybackToMcap = market.marketCap > 0 ? (annualized / market.marketCap) * 100 : 0;
         
         return {
-          ...protocol,
+          slug: protocol.slug,
+          name: protocol.name,
+          symbol: protocol.symbol,
+          geckoId: protocol.geckoId,
+          buybackSource: protocol.buybackSource,
+          businessModel: protocol.businessModel,
+          risks: protocol.risks,
           buyback,
           price: market.price,
           marketCap: market.marketCap,
-          priceChange24h: market.priceChange24h,
-          hourlyAvg,
+          priceChange7d: market.priceChange7d,
           dailyAvg,
-          weeklyAvg,
-          annualized,
-          peRatio,
-          trend,
+          buybackToMcap,
+          buyback7d: buyback?.trends.change7d || 0,
         };
       })
     );
     
-    setData(results.filter(p => p.buyback?.total30d && p.buyback.total30d > 0));
+    const filtered = results.filter(p => p.buyback?.total30d && p.buyback.total30d > 0);
+    
+    // Flash detection
+    const newFlash = new Set<string>();
+    for (const p of filtered) {
+      const prev = prevDataRef.current.get(p.slug);
+      if (prev !== undefined && Math.abs(prev - p.dailyAvg) > 100) {
+        newFlash.add(p.slug);
+      }
+      prevDataRef.current.set(p.slug, p.dailyAvg);
+    }
+    
+    if (newFlash.size > 0) {
+      setFlashRows(newFlash);
+      setTimeout(() => setFlashRows(new Set()), 1200);
+    }
+    
+    setData(filtered);
     setLastUpdated(new Date());
-    setLoading(false);
+    if (isInitial) setLoading(false);
   }, []);
 
   useEffect(() => {
-    loadData();
-    const interval = setInterval(loadData, 120000); // 2 min refresh
+    loadData(true);
+    const interval = setInterval(() => loadData(false), 30000);
     return () => clearInterval(interval);
   }, [loadData]);
 
   const sortedData = useMemo(() => {
     return [...data].sort((a, b) => {
-      let aVal = a[sortBy] ?? (sortAsc ? Infinity : -Infinity);
-      let bVal = b[sortBy] ?? (sortAsc ? Infinity : -Infinity);
-      
-      // For P/E, lower is better so we handle nulls differently
-      if (sortBy === 'peRatio') {
-        if (aVal === null) aVal = sortAsc ? -Infinity : Infinity;
-        if (bVal === null) bVal = sortAsc ? -Infinity : Infinity;
-      }
-      
-      return sortAsc ? aVal - bVal : bVal - aVal;
+      const aVal = a[sortBy] ?? 0;
+      const bVal = b[sortBy] ?? 0;
+      return sortDesc ? bVal - aVal : aVal - bVal;
     });
-  }, [data, sortBy, sortAsc]);
+  }, [data, sortBy, sortDesc]);
 
   const handleSort = (key: SortKey) => {
     if (sortBy === key) {
-      setSortAsc(!sortAsc);
+      setSortDesc(!sortDesc);
     } else {
       setSortBy(key);
-      setSortAsc(key === 'peRatio'); // Default ascending for P/E (lower is better)
+      setSortDesc(true);
     }
   };
 
-  const SortHeader = ({ label, sortKey, align = 'right' }: { label: string; sortKey: SortKey; align?: string }) => (
-    <th
-      className={`cursor-pointer hover:text-black ${align === 'right' ? 'text-right' : 'text-left'}`}
+  const SortHeader = ({ label, sortKey, className = '' }: { label: string; sortKey: SortKey; className?: string }) => (
+    <th 
+      className={`sortable ${className}`}
       onClick={() => handleSort(sortKey)}
     >
-      {label} {sortBy === sortKey && (sortAsc ? '↑' : '↓')}
+      {sortBy === sortKey && (sortDesc ? '▼ ' : '▲ ')}
+      {label}
     </th>
   );
 
   return (
     <div className="min-h-screen">
-      {/* Header */}
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 py-4">
-          <div className="flex justify-between items-center">
-            <div>
-              <h1 className="text-lg font-semibold">Crypto Buyback Tracker</h1>
-              <p className="text-sm muted">
-                Evaluate tokens by their buyback yield
-              </p>
-            </div>
-            <Link href="/simulator" className="text-sm px-3 py-1.5 bg-gray-100 rounded hover:bg-gray-200 no-underline">
-              Simulator →
-            </Link>
-            <div className="text-right">
-              <button onClick={loadData} disabled={loading} className="text-sm">
-                {loading ? 'Loading...' : 'Refresh'}
-              </button>
-              {lastUpdated && (
-                <p className="text-xs muted mt-1">
-                  Updated {lastUpdated.toLocaleTimeString()}
-                </p>
-              )}
-            </div>
-          </div>
-        </div>
+      {/* Hero */}
+      <header className="text-center py-8 sm:py-12 px-4 sm:px-6">
+        <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight mb-3 sm:mb-4">
+          Buyback Tracker
+        </h1>
+        <p className="text-base sm:text-lg md:text-xl text-gray-600 max-w-xl mx-auto">
+          Tokens that buy themselves back.<br className="hidden sm:block" />
+          <span className="sm:hidden"> </span>Which ones are doing it the most?
+        </p>
+        {lastUpdated && (
+          <p className="text-xs sm:text-sm text-gray-400 mt-4 sm:mt-6 num">
+            Updated {lastUpdated.toLocaleTimeString()}
+          </p>
+        )}
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 py-6">
-        {/* P/E Guide */}
-        <div className="card p-4 mb-6">
-          <div className="flex items-center justify-between flex-wrap gap-4">
-            <div>
-              <span className="text-sm font-medium">P/E Ratio Guide</span>
-              <span className="text-sm muted ml-2">
-                (Market Cap ÷ Annual Buyback)
-              </span>
-            </div>
-            <div className="flex gap-6 text-sm">
-              <span><span className="pe-cheap font-medium">&lt;10x</span> Cheap</span>
-              <span><span className="pe-fair font-medium">10-25x</span> Fair</span>
-              <span><span className="font-medium">25-50x</span> Growth</span>
-              <span><span className="pe-expensive font-medium">&gt;50x</span> Expensive</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Main Table */}
-        <div className="card overflow-hidden">
-          <div className="overflow-x-auto">
-            <table>
-              <thead>
-                <tr>
-                  <th className="w-12">#</th>
-                  <th className="text-left min-w-[180px]">Protocol</th>
-                  <th className="text-left min-w-[200px]">Buyback Source</th>
-                  <SortHeader label="Daily Avg" sortKey="dailyAvg" />
-                  <th className="text-right">Weekly Avg</th>
-                  <SortHeader label="Annual" sortKey="annualized" />
-                  <SortHeader label="Market Cap" sortKey="marketCap" />
-                  <SortHeader label="P/E" sortKey="peRatio" />
-                </tr>
-              </thead>
-              <tbody>
-                {loading ? (
-                  Array.from({ length: 10 }).map((_, i) => (
-                    <tr key={i}>
-                      <td colSpan={8}>
-                        <div className="skeleton h-5 w-full" />
+      {/* Table */}
+      <main className="max-w-5xl mx-auto px-3 sm:px-6 pb-12 sm:pb-16">
+        {loading ? (
+          <div className="text-center py-16 sm:py-20 text-gray-400">Loading...</div>
+        ) : (
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div className="overflow-x-auto table-wrapper">
+              <table className="leaderboard">
+                <thead>
+                  <tr>
+                    <th style={{ width: 50 }}>#</th>
+                    <th>Token</th>
+                    <SortHeader label="Daily" sortKey="dailyAvg" className="text-right" />
+                    <SortHeader label="% MCap" sortKey="buybackToMcap" className="text-right hidden sm:table-cell" />
+                    <SortHeader label="7d" sortKey="buyback7d" className="text-right" />
+                    <SortHeader label="Price" sortKey="priceChange7d" className="text-right" />
+                  </tr>
+                </thead>
+                <tbody>
+                  {sortedData.map((p, idx) => (
+                    <tr
+                      key={p.slug}
+                      onClick={() => setSelectedProtocol(p)}
+                      className={flashRows.has(p.slug) ? 'flash' : ''}
+                    >
+                      <td><Rank position={idx + 1} /></td>
+                      <td>
+                        <div className="font-semibold text-base sm:text-lg">{p.symbol}</div>
+                        <div className="text-xs sm:text-sm text-gray-500 truncate max-w-[120px] sm:max-w-[200px]">
+                          {p.buybackSource}
+                        </div>
+                      </td>
+                      <td className="text-right">
+                        <span className="num text-base sm:text-lg font-medium">{formatUSD(p.dailyAvg, true)}</span>
+                      </td>
+                      <td className="text-right hidden sm:table-cell">
+                        <span className="num text-base sm:text-lg">{p.buybackToMcap.toFixed(1)}%</span>
+                        <span className="text-xs text-gray-400 ml-1">/yr</span>
+                      </td>
+                      <td className="text-right">
+                        <Pct value={p.buyback7d} />
+                      </td>
+                      <td className="text-right">
+                        <Pct value={p.priceChange7d} />
                       </td>
                     </tr>
-                  ))
-                ) : sortedData.length === 0 ? (
-                  <tr>
-                    <td colSpan={8} className="text-center py-12 muted">
-                      No buyback data available
-                    </td>
-                  </tr>
-                ) : (
-                  sortedData.map((p, idx) => {
-                    const pe = getPERating(p.peRatio);
-                    return (
-                      <tr
-                        key={p.slug}
-                        className="cursor-pointer"
-                        onClick={() => setSelectedProtocol(p)}
-                      >
-                        <td className="muted">{idx + 1}</td>
-                        <td>
-                          <div className="font-medium">{p.symbol}</div>
-                          <div className="text-xs muted">{p.name}</div>
-                        </td>
-                        <td>
-                          <div className="text-sm text-gray-600 max-w-[250px] truncate">
-                            {p.buybackSource}
-                          </div>
-                        </td>
-                        <td className="text-right mono">
-                          {formatUSD(p.dailyAvg)}
-                        </td>
-                        <td className="text-right mono muted">
-                          {formatUSD(p.weeklyAvg)}
-                        </td>
-                        <td className="text-right mono">
-                          {formatUSD(p.annualized)}
-                        </td>
-                        <td className="text-right mono">
-                          {formatUSD(p.marketCap)}
-                        </td>
-                        <td className="text-right">
-                          <span className={`mono font-medium ${pe.class}`}>
-                            {pe.label}
-                          </span>
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
+        )}
 
-        {/* Footer */}
-        <footer className="mt-8 text-sm muted">
-          <p>
-            Data from <a href="https://defillama.com" target="_blank">DefiLlama</a> (buybacks) 
-            and <a href="https://coingecko.com" target="_blank">CoinGecko</a> (prices).
-            P/E = Market Cap ÷ Annualized Buyback. Lower P/E = higher buyback yield.
-          </p>
+        <footer className="mt-6 sm:mt-8 text-center text-xs sm:text-sm text-gray-400 px-4">
+          Data from DefiLlama & CoinGecko · Updates every 30s · Tap any row for details
         </footer>
       </main>
 
-      {/* Protocol Detail Modal */}
+      {/* Detail Modal */}
       {selectedProtocol && (
         <div
-          className="fixed inset-0 modal-overlay flex items-center justify-center p-4 z-50"
+          className="fixed inset-0 modal-backdrop flex items-end sm:items-center justify-center p-0 sm:p-4 z-50"
           onClick={() => setSelectedProtocol(null)}
         >
           <div
-            className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-xl"
+            className="bg-white rounded-t-2xl sm:rounded-xl w-full sm:max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Modal Header */}
-            <div className="p-6 border-b border-gray-200">
+            {/* Handle bar for mobile */}
+            <div className="sm:hidden flex justify-center pt-3 pb-1">
+              <div className="w-10 h-1 bg-gray-300 rounded-full"></div>
+            </div>
+
+            <div className="p-4 sm:p-6 border-b border-gray-100">
               <div className="flex justify-between items-start">
                 <div>
-                  <h2 className="text-xl font-semibold">
-                    {selectedProtocol.symbol}
-                    <span className="ml-2 text-base font-normal muted">
-                      {selectedProtocol.name}
-                    </span>
-                  </h2>
-                  <p className="text-sm muted mt-1">
-                    {selectedProtocol.buybackSource}
-                  </p>
+                  <h2 className="text-xl sm:text-2xl font-bold">{selectedProtocol.symbol}</h2>
+                  <p className="text-gray-500 text-sm sm:text-base">{selectedProtocol.name}</p>
                 </div>
                 <button
                   onClick={() => setSelectedProtocol(null)}
-                  className="secondary text-sm px-3 py-1"
+                  className="text-gray-400 hover:text-gray-600 text-2xl leading-none p-2 -mr-2"
                 >
-                  Close
+                  ×
                 </button>
               </div>
             </div>
 
-            {/* Key Metrics */}
-            <div className="p-6 grid grid-cols-2 md:grid-cols-4 gap-4 border-b border-gray-200">
+            <div className="p-4 sm:p-6 bg-gray-50 border-b border-gray-100">
+              <div className="text-xs sm:text-sm text-gray-500 mb-1">Buyback Source</div>
+              <div className="text-base sm:text-lg">{selectedProtocol.buybackSource}</div>
+            </div>
+
+            <div className="p-4 sm:p-6 grid grid-cols-2 gap-4 sm:gap-6 border-b border-gray-100">
               <div>
-                <div className="text-xs muted uppercase">P/E Ratio</div>
-                <div className={`text-2xl font-semibold mono ${getPERating(selectedProtocol.peRatio).class}`}>
-                  {getPERating(selectedProtocol.peRatio).label}
-                </div>
+                <div className="text-xs sm:text-sm text-gray-500">Daily Avg</div>
+                <div className="text-lg sm:text-xl font-semibold num">{formatUSD(selectedProtocol.dailyAvg)}</div>
               </div>
               <div>
-                <div className="text-xs muted uppercase">Daily Avg</div>
-                <div className="text-2xl font-semibold mono">
-                  {formatUSD(selectedProtocol.dailyAvg)}
-                </div>
+                <div className="text-xs sm:text-sm text-gray-500">% of MCap / yr</div>
+                <div className="text-lg sm:text-xl font-semibold num">{selectedProtocol.buybackToMcap.toFixed(1)}%</div>
               </div>
               <div>
-                <div className="text-xs muted uppercase">Annual</div>
-                <div className="text-2xl font-semibold mono">
-                  {formatUSD(selectedProtocol.annualized)}
-                </div>
+                <div className="text-xs sm:text-sm text-gray-500">7d Buyback</div>
+                <div className="text-lg sm:text-xl font-semibold"><Pct value={selectedProtocol.buyback7d} /></div>
               </div>
               <div>
-                <div className="text-xs muted uppercase">Market Cap</div>
-                <div className="text-2xl font-semibold mono">
-                  {formatUSD(selectedProtocol.marketCap)}
-                </div>
+                <div className="text-xs sm:text-sm text-gray-500">7d Price</div>
+                <div className="text-lg sm:text-xl font-semibold"><Pct value={selectedProtocol.priceChange7d} /></div>
               </div>
             </div>
 
-            {/* Business Analysis */}
-            <div className="p-6 space-y-4 border-b border-gray-200">
+            <div className="p-4 sm:p-6 grid grid-cols-2 gap-3 sm:gap-6 border-b border-gray-100 text-sm">
               <div>
-                <h3 className="text-sm font-semibold mb-1">Business Model</h3>
-                <p className="text-sm text-gray-600">{selectedProtocol.businessModel}</p>
+                <span className="text-gray-500">Price:</span>
+                <span className="ml-2 num">${selectedProtocol.price < 1 ? selectedProtocol.price.toFixed(4) : selectedProtocol.price.toFixed(2)}</span>
               </div>
               <div>
-                <h3 className="text-sm font-semibold mb-1">Growth Drivers</h3>
-                <p className="text-sm text-gray-600">{selectedProtocol.growthDrivers}</p>
+                <span className="text-gray-500">MCap:</span>
+                <span className="ml-2 num">{formatUSD(selectedProtocol.marketCap)}</span>
               </div>
               <div>
-                <h3 className="text-sm font-semibold mb-1">Risks</h3>
-                <p className="text-sm text-gray-600">{selectedProtocol.risks}</p>
+                <span className="text-gray-500">30d:</span>
+                <span className="ml-2 num">{formatUSD(selectedProtocol.buyback?.total30d || 0)}</span>
+              </div>
+              <div>
+                <span className="text-gray-500">All Time:</span>
+                <span className="ml-2 num">{formatUSD(selectedProtocol.buyback?.totalAllTime || 0)}</span>
               </div>
             </div>
 
             {/* Chart */}
-            <div className="p-6">
-              <h3 className="text-sm font-semibold mb-4">Daily Buyback (90 days)</h3>
+            <div className="p-4 sm:p-6 border-b border-gray-100">
+              <div className="text-xs sm:text-sm text-gray-500 mb-3">Daily Buybacks (90 days)</div>
               {selectedProtocol.buyback?.dailyChart && selectedProtocol.buyback.dailyChart.length > 0 ? (
-                <div style={{ height: 200 }}>
+                <div style={{ height: 120 }}>
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={selectedProtocol.buyback.dailyChart}>
+                    <AreaChart data={selectedProtocol.buyback.dailyChart}>
+                      <defs>
+                        <linearGradient id="grad" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#8b5cf6" stopOpacity={0.3}/>
+                          <stop offset="100%" stopColor="#8b5cf6" stopOpacity={0}/>
+                        </linearGradient>
+                      </defs>
                       <XAxis
                         dataKey="date"
                         axisLine={false}
                         tickLine={false}
-                        tick={{ fill: '#888', fontSize: 10 }}
+                        tick={{ fill: '#999', fontSize: 9 }}
                         tickFormatter={(v) => v.slice(5)}
                         interval="preserveStartEnd"
                       />
                       <YAxis
                         axisLine={false}
                         tickLine={false}
-                        tick={{ fill: '#888', fontSize: 10 }}
+                        tick={{ fill: '#999', fontSize: 9 }}
                         tickFormatter={(v) => v >= 1e6 ? `${(v/1e6).toFixed(1)}M` : `${(v/1e3).toFixed(0)}K`}
-                        width={45}
+                        width={40}
                       />
                       <Tooltip
-                        contentStyle={{
-                          background: '#fff',
-                          border: '1px solid #e5e5e5',
-                          borderRadius: 4,
-                          fontSize: 12,
-                        }}
+                        contentStyle={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 11 }}
                         formatter={(value: number) => [formatUSD(value), 'Buyback']}
                       />
-                      <Bar dataKey="value" fill="#111" radius={[2, 2, 0, 0]} />
-                    </BarChart>
+                      <Area type="monotone" dataKey="value" stroke="#8b5cf6" strokeWidth={2} fill="url(#grad)" />
+                    </AreaChart>
                   </ResponsiveContainer>
                 </div>
               ) : (
-                <div className="text-center py-8 muted">No chart data</div>
+                <div className="text-center py-6 text-gray-400 text-sm">No chart data</div>
               )}
             </div>
 
-            {/* Additional Stats */}
-            <div className="p-6 bg-gray-50 rounded-b-lg">
-              <div className="grid grid-cols-3 gap-4 text-sm">
-                <div>
-                  <span className="muted">Hourly Avg:</span>
-                  <span className="ml-2 mono">{formatUSD(selectedProtocol.hourlyAvg)}</span>
-                </div>
-                <div>
-                  <span className="muted">Weekly Avg:</span>
-                  <span className="ml-2 mono">{formatUSD(selectedProtocol.weeklyAvg)}</span>
-                </div>
-                <div>
-                  <span className="muted">All Time:</span>
-                  <span className="ml-2 mono">{formatUSD(selectedProtocol.buyback?.totalAllTime || 0)}</span>
-                </div>
-                <div>
-                  <span className="muted">Price:</span>
-                  <span className="ml-2 mono">${selectedProtocol.price?.toFixed(selectedProtocol.price < 1 ? 4 : 2)}</span>
-                </div>
-                <div>
-                  <span className="muted">24h Change:</span>
-                  <span className="ml-2 mono">
-                    {selectedProtocol.priceChange24h >= 0 ? '+' : ''}
-                    {selectedProtocol.priceChange24h?.toFixed(1)}%
-                  </span>
-                </div>
-                <div>
-                  <span className="muted">30d Buyback:</span>
-                  <span className="ml-2 mono">{formatUSD(selectedProtocol.buyback?.total30d || 0)}</span>
-                </div>
+            {/* Business Info */}
+            <div className="p-4 sm:p-6 space-y-4 text-sm">
+              <div>
+                <div className="text-gray-500 mb-1">Business Model</div>
+                <div className="text-gray-700">{selectedProtocol.businessModel}</div>
+              </div>
+              <div>
+                <div className="text-gray-500 mb-1">Risks</div>
+                <div className="text-gray-700">{selectedProtocol.risks}</div>
               </div>
             </div>
+
+            {/* Bottom safe area for mobile */}
+            <div className="h-6 sm:hidden"></div>
           </div>
         </div>
       )}
