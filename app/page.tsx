@@ -162,16 +162,24 @@ export default function Home() {
           <div className="text-center py-16 sm:py-20 text-gray-400">Loading...</div>
         ) : (
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-            <div className="overflow-x-auto table-wrapper">
-              <table className="leaderboard">
+            <div className="overflow-x-auto">
+              <table className="leaderboard" style={{ minWidth: 600 }}>
+                <colgroup>
+                  <col style={{ width: 48 }} />
+                  <col style={{ width: '30%' }} />
+                  <col style={{ width: '18%' }} />
+                  <col style={{ width: '14%' }} className="hidden sm:table-column" />
+                  <col style={{ width: '12%' }} />
+                  <col style={{ width: '12%' }} />
+                </colgroup>
                 <thead>
                   <tr>
-                    <th style={{ width: 50 }}>#</th>
+                    <th>#</th>
                     <th>Token</th>
-                    <SortHeader label="Daily" sortKey="dailyAvg" className="text-right" />
-                    <SortHeader label="% MCap" sortKey="buybackToMcap" className="text-right hidden sm:table-cell" />
-                    <SortHeader label="7d" sortKey="buyback7d" className="text-right" />
-                    <SortHeader label="Price" sortKey="priceChange7d" className="text-right" />
+                    <SortHeader label="Daily Avg" sortKey="dailyAvg" className="text-right" />
+                    <SortHeader label="% MCap/yr" sortKey="buybackToMcap" className="text-right hidden sm:table-cell" />
+                    <SortHeader label="BB 7d" sortKey="buyback7d" className="text-right" />
+                    <SortHeader label="Price 7d" sortKey="priceChange7d" className="text-right" />
                   </tr>
                 </thead>
                 <tbody>
@@ -183,17 +191,16 @@ export default function Home() {
                     >
                       <td><Rank position={idx + 1} /></td>
                       <td>
-                        <div className="font-semibold text-base sm:text-lg">{p.symbol}</div>
-                        <div className="text-xs sm:text-sm text-gray-500 truncate max-w-[120px] sm:max-w-[200px]">
+                        <div className="font-semibold">{p.symbol}</div>
+                        <div className="text-xs text-gray-500 truncate" style={{ maxWidth: 180 }}>
                           {p.buybackSource}
                         </div>
                       </td>
                       <td className="text-right">
-                        <span className="num text-base sm:text-lg font-medium">{formatUSD(p.dailyAvg, true)}</span>
+                        <span className="num font-medium">{formatUSD(p.dailyAvg, true)}</span>
                       </td>
                       <td className="text-right hidden sm:table-cell">
-                        <span className="num text-base sm:text-lg">{p.buybackToMcap.toFixed(1)}%</span>
-                        <span className="text-xs text-gray-400 ml-1">/yr</span>
+                        <span className="num">{p.buybackToMcap.toFixed(1)}%</span>
                       </td>
                       <td className="text-right">
                         <Pct value={p.buyback7d} />

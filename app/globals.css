@@ -46,6 +46,7 @@ body {
 .leaderboard {
   width: 100%;
   border-collapse: collapse;
+  table-layout: fixed;
 }
 
 .leaderboard th {
@@ -61,15 +62,21 @@ body {
   white-space: nowrap;
 }
 
+.leaderboard th.text-right,
+.leaderboard td.text-right {
+  text-align: right;
+}
+
 @media (max-width: 640px) {
   .leaderboard th {
-    padding: 10px 12px;
+    padding: 10px 8px;
     font-size: 10px;
   }
 }
 
 .leaderboard th:first-child {
   border-radius: 8px 0 0 0;
+  width: 48px;
 }
 
 .leaderboard th:last-child {
@@ -93,7 +100,7 @@ body {
 
 @media (max-width: 640px) {
   .leaderboard td {
-    padding: 12px;
+    padding: 10px 8px;
   }
 }
 
