@@ -71,13 +71,7 @@ export default function Home() {
         const buybackToMcap = market.marketCap > 0 ? (annualized / market.marketCap) * 100 : 0;
         
         return {
-          slug: protocol.slug,
-          name: protocol.name,
-          symbol: protocol.symbol,
-          geckoId: protocol.geckoId,
-          buybackSource: protocol.buybackSource,
-          businessModel: protocol.businessModel,
-          risks: protocol.risks,
+          ...protocol,
           buyback,
           price: market.price,
           marketCap: market.marketCap,
