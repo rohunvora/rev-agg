@@ -146,8 +146,8 @@ export default function Home() {
           Buyback Tracker
         </h1>
         <p className="text-base sm:text-lg md:text-xl text-gray-600 max-w-xl mx-auto">
-          Tokens that buy themselves back.<br className="hidden sm:block" />
-          <span className="sm:hidden"> </span>Which ones are doing it the most?
+          Protocols that buy their token from the open market.<br className="hidden sm:block" />
+          <span className="sm:hidden"> </span>Verified buybacks only.
         </p>
         {lastUpdated && (
           <p className="text-xs sm:text-sm text-gray-400 mt-4 sm:mt-6 num">
@@ -217,7 +217,7 @@ export default function Home() {
         )}
 
         <footer className="mt-6 sm:mt-8 text-center text-xs sm:text-sm text-gray-400 px-4">
-          Data from DefiLlama & CoinGecko · Updates every 30s · Tap any row for details
+          Data from DefiLlama & CoinGecko · Verified buybacks only · Tap row for details
         </footer>
       </main>
 

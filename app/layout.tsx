@@ -10,12 +10,12 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   title: 'Buyback Tracker',
-  description: 'Which crypto tokens are buying themselves back? Track daily buybacks, see trends, and find opportunities.',
+  description: 'Track crypto protocols with verified buyback programs. See which tokens are being bought from the open market daily.',
   keywords: ['crypto', 'buyback', 'tokens', 'defi', 'trading', 'investment'],
   authors: [{ name: 'Buyback Tracker' }],
   openGraph: {
     title: 'Buyback Tracker',
-    description: 'Which crypto tokens are buying themselves back? Track daily buybacks, see trends, and find opportunities.',
+    description: 'Track crypto protocols with verified buyback programs. See which tokens are being bought from the open market daily.',
     url: 'https://rev-agg.vercel.app',
     siteName: 'Buyback Tracker',
     locale: 'en_US',
@@ -24,7 +24,7 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     title: 'Buyback Tracker',
-    description: 'Which crypto tokens are buying themselves back? Track daily buybacks, see trends, and find opportunities.',
+    description: 'Track crypto protocols with verified buyback programs. See which tokens are being bought from the open market daily.',
   },
   robots: {
     index: true,
