@@ -60,6 +60,8 @@ export default function Home() {
   const [selectedProtocol, setSelectedProtocol] = useState<ProtocolData | null>(null);
   const [sortBy, setSortBy] = useState<SortKey>('dailyAvg');
   const [sortDesc, setSortDesc] = useState(true);
+  const [revSortBy, setRevSortBy] = useState<'total24h' | 'change7d' | 'total30d'>('total24h');
+  const [revSortDesc, setRevSortDesc] = useState(true);
   const [flashRows, setFlashRows] = useState<Set<string>>(new Set());
   const prevDataRef = useRef<Map<string, number>>(new Map());
 
@@ -158,9 +160,11 @@ export default function Home() {
 
   const sortedRevenueData = useMemo(() => {
     return [...revenueData].sort((a, b) => {
-      return sortDesc ? b.total24h - a.total24h : a.total24h - b.total24h;
+      const aVal = a[revSortBy] ?? 0;
+      const bVal = b[revSortBy] ?? 0;
+      return revSortDesc ? bVal - aVal : aVal - bVal;
     });
-  }, [revenueData, sortDesc]);
+  }, [revenueData, revSortBy, revSortDesc]);
 
   const handleSort = (key: SortKey) => {
     if (sortBy === key) {
@@ -177,6 +181,25 @@ export default function Home() {
       onClick={() => handleSort(sortKey)}
     >
       {sortBy === sortKey && (sortDesc ? '▼ ' : '▲ ')}
+      {label}
+    </th>
+  );
+
+  const handleRevSort = (key: 'total24h' | 'change7d' | 'total30d') => {
+    if (revSortBy === key) {
+      setRevSortDesc(!revSortDesc);
+    } else {
+      setRevSortBy(key);
+      setRevSortDesc(true);
+    }
+  };
+
+  const RevSortHeader = ({ label, sortKey, className = '' }: { label: string; sortKey: 'total24h' | 'change7d' | 'total30d'; className?: string }) => (
+    <th 
+      className={`sortable ${className}`}
+      onClick={() => handleRevSort(sortKey)}
+    >
+      {revSortBy === sortKey && (revSortDesc ? '▼ ' : '▲ ')}
       {label}
     </th>
   );
@@ -341,9 +364,9 @@ export default function Home() {
                   <tr>
                     <th>#</th>
                     <th>Protocol</th>
-                    <th className="text-right">Daily Revenue</th>
-                    <th className="text-right">7d Change</th>
-                    <th className="text-right">30d Total</th>
+                    <RevSortHeader label="Daily" sortKey="total24h" className="text-right" />
+                    <RevSortHeader label="7d Chg" sortKey="change7d" className="text-right" />
+                    <RevSortHeader label="30d Total" sortKey="total30d" className="text-right" />
                   </tr>
                 </thead>
                 <tbody>
