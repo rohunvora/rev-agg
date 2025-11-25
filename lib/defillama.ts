@@ -12,6 +12,10 @@ export type { DailyDataPoint, BuybackTrends, BuybackData };
 const DEFILLAMA_API = 'https://api.llama.fi';
 const COINGECKO_API = 'https://api.coingecko.com/api/v3';
 
+// Simple in-memory cache for market data
+let marketDataCache: { data: Record<string, MarketData>; timestamp: number } | null = null;
+const CACHE_TTL = 30000; // 30 seconds
+
 /**
  * Calculate % change between two periods
  */
@@ -21,15 +25,33 @@ function calcChange(recent: number, prior: number): number {
 }
 
 /**
+ * Fetch with retry logic
+ */
+async function fetchWithRetry(url: string, retries = 2): Promise<Response> {
+  for (let i = 0; i <= retries; i++) {
+    try {
+      const response = await fetch(url, { 
+        cache: 'no-store',
+        headers: { 'Accept': 'application/json' }
+      });
+      if (response.ok) return response;
+      if (i < retries) await new Promise(r => setTimeout(r, 1000 * (i + 1)));
+    } catch (error) {
+      if (i === retries) throw error;
+      await new Promise(r => setTimeout(r, 1000 * (i + 1)));
+    }
+  }
+  throw new Error(`Failed to fetch ${url}`);
+}
+
+/**
  * Fetch buyback data (holders revenue) for a protocol from DefiLlama
  */
 export async function fetchBuybackData(slug: string): Promise<BuybackData | null> {
   try {
-    const response = await fetch(
-      `${DEFILLAMA_API}/summary/fees/${slug}?dataType=dailyHoldersRevenue`,
-      { next: { revalidate: 60 } }
+    const response = await fetchWithRetry(
+      `${DEFILLAMA_API}/summary/fees/${slug}?dataType=dailyHoldersRevenue`
     );
-    if (!response.ok) return null;
     
     const data = await response.json();
     
@@ -98,18 +120,29 @@ export async function fetchBuybackData(slug: string): Promise<BuybackData | null
 
 /**
  * Fetch market data from CoinGecko for multiple tokens
+ * Uses in-memory cache to avoid rate limits
  */
 export async function fetchMarketData(geckoIds: string[]): Promise<Record<string, MarketData>> {
+  // Return cached data if fresh
+  if (marketDataCache && Date.now() - marketDataCache.timestamp < CACHE_TTL) {
+    return marketDataCache.data;
+  }
+  
   const ids = geckoIds.join(',');
   
   try {
-    const response = await fetch(
-      `${COINGECKO_API}/coins/markets?vs_currency=usd&ids=${ids}&order=market_cap_desc&per_page=100&page=1&sparkline=false&price_change_percentage=24h,7d,14d,30d`,
-      { next: { revalidate: 30 } }
+    const response = await fetchWithRetry(
+      `${COINGECKO_API}/coins/markets?vs_currency=usd&ids=${ids}&order=market_cap_desc&per_page=100&page=1&sparkline=false&price_change_percentage=24h,7d,14d,30d`
     );
-    if (!response.ok) return {};
     
     const data = await response.json();
+    
+    // Check if we got valid data
+    if (!Array.isArray(data) || data.length === 0) {
+      console.error('CoinGecko returned empty data');
+      return marketDataCache?.data || {};
+    }
+    
     const result: Record<string, MarketData> = {};
     
     for (const coin of data) {
@@ -123,9 +156,13 @@ export async function fetchMarketData(geckoIds: string[]): Promise<Record<string
       };
     }
     
+    // Update cache
+    marketDataCache = { data: result, timestamp: Date.now() };
+    
     return result;
   } catch (error) {
     console.error('Failed to fetch market data:', error);
-    return {};
+    // Return cached data if available
+    return marketDataCache?.data || {};
   }
 }

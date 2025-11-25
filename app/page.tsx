@@ -56,54 +56,66 @@ export default function Home() {
   const loadData = useCallback(async (isInitial = false) => {
     if (isInitial) setLoading(true);
     
-    const geckoIds = PROTOCOLS.map(p => p.geckoId);
-    const marketData = await fetchMarketData(geckoIds);
-    
-    const results = await Promise.all(
-      PROTOCOLS.map(async (protocol) => {
-        const buyback = await fetchBuybackData(protocol.slug);
-        const market = marketData[protocol.geckoId] || { 
-          price: 0, marketCap: 0, priceChange24h: 0, priceChange7d: 0, priceChange14d: 0, priceChange30d: 0 
-        };
+    try {
+      // Fetch market data first and wait for it
+      const geckoIds = PROTOCOLS.map(p => p.geckoId);
+      const marketData = await fetchMarketData(geckoIds);
+      
+      // Check if we got valid market data
+      const hasMarketData = Object.keys(marketData).length > 0;
+      
+      const results = await Promise.all(
+        PROTOCOLS.map(async (protocol) => {
+          const buyback = await fetchBuybackData(protocol.slug);
+          const market = marketData[protocol.geckoId] || { 
+            price: 0, marketCap: 0, priceChange24h: 0, priceChange7d: 0, priceChange14d: 0, priceChange30d: 0 
+          };
+          
+          const dailyAvg = buyback?.avg30d || 0;
+          const annualized = dailyAvg * 365;
+          const buybackToMcap = market.marketCap > 0 ? (annualized / market.marketCap) * 100 : 0;
+          
+          return {
+            ...protocol,
+            buyback,
+            price: market.price,
+            marketCap: market.marketCap,
+            priceChange7d: market.priceChange7d,
+            dailyAvg,
+            buybackToMcap,
+            buyback7d: buyback?.trends.change7d || 0,
+          };
+        })
+      );
+      
+      const filtered = results.filter(p => p.buyback?.total30d && p.buyback.total30d > 0);
+      
+      // Only update if we have valid data (either new market data or existing data)
+      if (filtered.length > 0 && (hasMarketData || data.length === 0)) {
+        // Flash detection
+        const newFlash = new Set<string>();
+        for (const p of filtered) {
+          const prev = prevDataRef.current.get(p.slug);
+          if (prev !== undefined && Math.abs(prev - p.dailyAvg) > 100) {
+            newFlash.add(p.slug);
+          }
+          prevDataRef.current.set(p.slug, p.dailyAvg);
+        }
         
-        const dailyAvg = buyback?.avg30d || 0;
-        const annualized = dailyAvg * 365;
-        const buybackToMcap = market.marketCap > 0 ? (annualized / market.marketCap) * 100 : 0;
+        if (newFlash.size > 0) {
+          setFlashRows(newFlash);
+          setTimeout(() => setFlashRows(new Set()), 1200);
+        }
         
-        return {
-          ...protocol,
-          buyback,
-          price: market.price,
-          marketCap: market.marketCap,
-          priceChange7d: market.priceChange7d,
-          dailyAvg,
-          buybackToMcap,
-          buyback7d: buyback?.trends.change7d || 0,
-        };
-      })
-    );
-    
-    const filtered = results.filter(p => p.buyback?.total30d && p.buyback.total30d > 0);
-    
-    // Flash detection
-    const newFlash = new Set<string>();
-    for (const p of filtered) {
-      const prev = prevDataRef.current.get(p.slug);
-      if (prev !== undefined && Math.abs(prev - p.dailyAvg) > 100) {
-        newFlash.add(p.slug);
+        setData(filtered);
+        setLastUpdated(new Date());
       }
-      prevDataRef.current.set(p.slug, p.dailyAvg);
+    } catch (error) {
+      console.error('Error loading data:', error);
+    } finally {
+      if (isInitial) setLoading(false);
     }
-    
-    if (newFlash.size > 0) {
-      setFlashRows(newFlash);
-      setTimeout(() => setFlashRows(new Set()), 1200);
-    }
-    
-    setData(filtered);
-    setLastUpdated(new Date());
-    if (isInitial) setLoading(false);
-  }, []);
+  }, [data.length]);
 
   useEffect(() => {
     loadData(true);
