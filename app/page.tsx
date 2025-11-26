@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { fetchRevenueDetail, RevenueProtocol, RevenueDetail } from '@/lib/defillama';
-import { ProtocolData, SortKey, MarketCoin } from '@/lib/types';
+import { ProtocolData, SortKey } from '@/lib/types';
 import {
   AreaChart,
   Area,
@@ -12,7 +12,7 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 
-type ViewMode = 'buybacks' | 'revenue' | 'market';
+type ViewMode = 'buybacks' | 'revenue';
 
 function formatUSD(value: number, short = false): string {
   if (!value || value === 0) return '—';
@@ -30,7 +30,7 @@ function formatPct(value: number, showSign = true): string {
 
 function Rank({ position, mode }: { position: number; mode: ViewMode }) {
   const cls = position === 1 
-    ? (mode === 'revenue' ? 'rank-1-gold' : mode === 'market' ? 'rank-1-gold' : 'rank-1') 
+    ? (mode === 'revenue' ? 'rank-1-gold' : 'rank-1') 
     : position === 2 
     ? 'rank-2' 
     : position === 3 
@@ -54,7 +54,6 @@ export default function Home() {
   const [viewMode, setViewMode] = useState<ViewMode>('buybacks');
   const [buybackData, setBuybackData] = useState<ProtocolData[]>([]);
   const [revenueData, setRevenueData] = useState<RevenueProtocol[]>([]);
-  const [marketData, setMarketData] = useState<MarketCoin[]>([]);
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [selectedProtocol, setSelectedProtocol] = useState<ProtocolData | null>(null);
@@ -133,25 +132,12 @@ export default function Home() {
     }
   }, []);
 
-  const loadMarketData = useCallback(async () => {
-    try {
-      const response = await fetch('/api/data?type=market');
-      const { data } = await response.json();
-      if (data && data.length > 0) {
-        setMarketData(data);
-      }
-    } catch (error) {
-      console.error('Error loading market data:', error);
-    }
-  }, []);
-
   const loadAllData = useCallback(async (isInitial = false) => {
     if (isInitial) setLoading(true);
     
     await Promise.all([
       loadBuybackData(),
       loadRevenueData(),
-      loadMarketData(),
     ]);
     
     setLastUpdated(new Date());
@@ -279,13 +265,13 @@ export default function Home() {
               <span className="mr-1.5">💰</span>
               Revenue
             </button>
-            <button
-              onClick={() => handleTabChange('market')}
-              className={`tab-btn ${viewMode === 'market' ? 'tab-active-market' : ''}`}
+            <a
+              href="/market"
+              className="tab-btn hover:bg-blue-500/10"
             >
               <span className="mr-1.5">📊</span>
-              Market
-            </button>
+              Market →
+            </a>
           </div>
         </div>
 
@@ -381,7 +367,7 @@ export default function Home() {
               </table>
             </div>
           </div>
-        ) : viewMode === 'revenue' ? (
+        ) : (
           /* Revenue Table */
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
             <div className="table-wrapper">
@@ -423,67 +409,10 @@ export default function Home() {
               </table>
             </div>
           </div>
-        ) : (
-          /* Market Table */
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-            <div className="table-wrapper">
-              <table className="leaderboard" style={{ minWidth: 520 }}>
-                <thead>
-                  <tr>
-                    <th style={{ width: 36 }}>#</th>
-                    <th style={{ width: 100 }}>Coin</th>
-                    <th className="text-right">Price</th>
-                    <th className="text-right">24h</th>
-                    <th className="text-right">7d</th>
-                    <th className="text-right">MCap</th>
-                    <th className="text-right">Volume</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {marketData.map((coin, idx) => (
-                    <tr key={coin.id}>
-                      <td><Rank position={idx + 1} mode="market" /></td>
-                      <td>
-                        <div className="flex items-center gap-2">
-                          {coin.image && (
-                            <img src={coin.image} alt={coin.name} className="w-5 h-5 rounded-full" />
-                          )}
-                          <div>
-                            <div className="font-semibold text-sm flex items-center gap-1">
-                              {coin.symbol}
-                              {coin.hasBuyback && (
-                                <span className="buyback-badge text-[9px]">🔄</span>
-                              )}
-                            </div>
-                            <div className="text-[10px] text-gray-500 truncate max-w-[70px]">{coin.name}</div>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="text-right">
-                        <span className="num text-xs">${coin.price >= 1 ? coin.price.toLocaleString(undefined, { maximumFractionDigits: 2 }) : coin.price.toPrecision(4)}</span>
-                      </td>
-                      <td className="text-right">
-                        <Pct value={coin.priceChange24h} />
-                      </td>
-                      <td className="text-right">
-                        <Pct value={coin.priceChange7d} />
-                      </td>
-                      <td className="text-right">
-                        <span className="num text-xs">{formatUSD(coin.marketCap, true)}</span>
-                      </td>
-                      <td className="text-right">
-                        <span className="num text-xs">{formatUSD(coin.volume24h, true)}</span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
         )}
 
         <footer className="mt-6 sm:mt-8 text-center text-xs sm:text-sm text-gray-400 px-4 space-y-2 pb-6 sm:pb-4" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 1.5rem)' }}>
-          <div>Data from DefiLlama & CoinGecko · {viewMode === 'buybacks' ? 'Verified buybacks only' : viewMode === 'revenue' ? 'Top 30 by daily revenue' : 'Top 100 excluding stablecoins & wrapped tokens'}</div>
+          <div>Data from DefiLlama & CoinGecko · {viewMode === 'buybacks' ? 'Verified buybacks only' : 'Top 30 by daily revenue'}</div>
           <div className="text-gray-300 hidden sm:block">Tap row for details</div>
           {viewMode === 'buybacks' && (
             <div className="text-gray-300 hidden sm:block">
