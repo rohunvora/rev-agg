@@ -393,6 +393,101 @@ function getCategory(categories: string[]): string {
 }
 
 /**
+ * Trusted exchanges whitelist
+ * These are major, regulated exchanges with real volume
+ */
+const TRUSTED_EXCHANGES = new Set([
+  'binance',
+  'coinbase',
+  'kraken',
+  'okx',
+  'bybit',
+  'bitget',
+  'htx',           // Huobi
+  'kucoin',
+  'gate',
+  'bitstamp',
+  'gemini',
+  'crypto_com',
+  'upbit',
+  'bithumb',
+  'bitfinex',
+  'mexc',
+  'whitebit',
+]);
+
+// Cache for trusted volume data (separate from main cache)
+const trustedVolumeCache = new Map<string, { volume: number; timestamp: number }>();
+const VOLUME_CACHE_TTL = 300000; // 5 minutes
+
+/**
+ * Fetch trusted volume for a single coin from CoinGecko tickers
+ */
+async function fetchTrustedVolume(coinId: string): Promise<number> {
+  // Check cache first
+  const cached = trustedVolumeCache.get(coinId);
+  if (cached && Date.now() - cached.timestamp < VOLUME_CACHE_TTL) {
+    return cached.volume;
+  }
+
+  try {
+    const response = await fetch(
+      `${COINGECKO_API}/coins/${coinId}/tickers?include_exchange_logo=false&depth=false`,
+      { next: { revalidate: 300 } } // 5 min cache
+    );
+    
+    if (!response.ok) return 0;
+    
+    const data = await response.json();
+    if (!data.tickers || !Array.isArray(data.tickers)) return 0;
+    
+    // Sum volume from trusted exchanges only
+    let trustedVolume = 0;
+    for (const ticker of data.tickers) {
+      const exchangeId = ticker.market?.identifier?.toLowerCase();
+      if (exchangeId && TRUSTED_EXCHANGES.has(exchangeId)) {
+        // Use converted volume in USD
+        trustedVolume += ticker.converted_volume?.usd || 0;
+      }
+    }
+    
+    // Cache the result
+    trustedVolumeCache.set(coinId, { volume: trustedVolume, timestamp: Date.now() });
+    
+    return trustedVolume;
+  } catch (error) {
+    console.error(`[Server] Failed to fetch tickers for ${coinId}:`, error);
+    return 0;
+  }
+}
+
+/**
+ * Fetch trusted volumes for multiple coins with rate limiting
+ */
+async function fetchTrustedVolumes(coinIds: string[]): Promise<Map<string, number>> {
+  const results = new Map<string, number>();
+  
+  // Process in batches of 5 with delays to avoid rate limits
+  const batchSize = 5;
+  for (let i = 0; i < coinIds.length; i += batchSize) {
+    const batch = coinIds.slice(i, i + batchSize);
+    const promises = batch.map(async (id) => {
+      const volume = await fetchTrustedVolume(id);
+      results.set(id, volume);
+    });
+    
+    await Promise.all(promises);
+    
+    // Small delay between batches to respect rate limits
+    if (i + batchSize < coinIds.length) {
+      await new Promise(resolve => setTimeout(resolve, 200));
+    }
+  }
+  
+  return results;
+}
+
+/**
  * Fetch clean market data from CoinGecko
  */
 async function fetchCleanMarketDataRaw(): Promise<MarketCoin[]> {
@@ -412,32 +507,37 @@ async function fetchCleanMarketDataRaw(): Promise<MarketCoin[]> {
     
     if (!Array.isArray(data)) return [];
     
-    // Filter and transform
-    const cleanCoins: MarketCoin[] = data
+    // Filter coins first
+    const filteredCoins = data
       .filter((coin: any) => {
-        // Exclude by ID
         if (EXCLUDED_IDS.has(coin.id)) return false;
-        // Must have market cap
         if (!coin.market_cap || coin.market_cap < 1000000) return false;
         return true;
       })
-      .slice(0, 100) // Top 100 clean coins
-      .map((coin: any, index: number) => ({
-        id: coin.id,
-        symbol: coin.symbol?.toUpperCase() || '',
-        name: coin.name || '',
-        image: coin.image || '',
-        price: coin.current_price || 0,
-        marketCap: coin.market_cap || 0,
-        marketCapRank: index + 1, // Re-rank after filtering
-        volume24h: coin.total_volume || 0,
-        priceChange24h: coin.price_change_percentage_24h || 0,
-        priceChange7d: coin.price_change_percentage_7d_in_currency || 0,
-        circulatingSupply: coin.circulating_supply || 0,
-        totalSupply: coin.total_supply || null,
-        category: 'Crypto', // Default, can enhance later
-        hasBuyback: BUYBACK_IDS.has(coin.id),
-      }));
+      .slice(0, 100);
+    
+    // Fetch trusted volumes for all coins
+    const coinIds = filteredCoins.map((c: any) => c.id);
+    const trustedVolumes = await fetchTrustedVolumes(coinIds);
+    
+    // Transform with trusted volume data
+    const cleanCoins: MarketCoin[] = filteredCoins.map((coin: any, index: number) => ({
+      id: coin.id,
+      symbol: coin.symbol?.toUpperCase() || '',
+      name: coin.name || '',
+      image: coin.image || '',
+      price: coin.current_price || 0,
+      marketCap: coin.market_cap || 0,
+      marketCapRank: index + 1,
+      volume24h: coin.total_volume || 0,
+      trustedVolume24h: trustedVolumes.get(coin.id) || 0,
+      priceChange24h: coin.price_change_percentage_24h || 0,
+      priceChange7d: coin.price_change_percentage_7d_in_currency || 0,
+      circulatingSupply: coin.circulating_supply || 0,
+      totalSupply: coin.total_supply || null,
+      category: 'Crypto',
+      hasBuyback: BUYBACK_IDS.has(coin.id),
+    }));
     
     return cleanCoins;
   } catch (error) {

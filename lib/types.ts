@@ -97,7 +97,8 @@ export interface MarketCoin {
   price: number;
   marketCap: number;
   marketCapRank: number;
-  volume24h: number;
+  volume24h: number;           // Total reported volume (includes wash trading)
+  trustedVolume24h: number;    // Volume from trusted exchanges only
   priceChange24h: number;
   priceChange7d: number;
   circulatingSupply: number;
