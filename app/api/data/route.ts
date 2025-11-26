@@ -6,7 +6,7 @@
  */
 
 import { NextResponse } from 'next/server';
-import { getBuybacksData, getRevenueData } from '@/lib/data-server';
+import { getBuybacksData, getRevenueData, getCleanMarketData } from '@/lib/data-server';
 
 // This route uses cached data, so we can enable static generation
 export const dynamic = 'force-dynamic';
@@ -19,6 +19,15 @@ export async function GET(request: Request) {
   try {
     if (type === 'revenue') {
       const data = await getRevenueData();
+      return NextResponse.json({ 
+        data, 
+        timestamp: Date.now(),
+        cached: true 
+      });
+    }
+    
+    if (type === 'market') {
+      const data = await getCleanMarketData();
       return NextResponse.json({ 
         data, 
         timestamp: Date.now(),

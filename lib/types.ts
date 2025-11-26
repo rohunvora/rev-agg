@@ -86,3 +86,23 @@ export interface ProtocolData extends ProtocolConfig {
  */
 export type SortKey = 'dailyAvg' | 'buybackToMcap' | 'buyback7d' | 'priceChange7d' | 'marketCap' | 'peRatio' | 'buybackVsVolume';
 
+/**
+ * Clean market coin data (excluding stablecoins, wrapped tokens, etc.)
+ */
+export interface MarketCoin {
+  id: string;
+  symbol: string;
+  name: string;
+  image: string;
+  price: number;
+  marketCap: number;
+  marketCapRank: number;
+  volume24h: number;
+  priceChange24h: number;
+  priceChange7d: number;
+  circulatingSupply: number;
+  totalSupply: number | null;
+  category: string;
+  hasBuyback: boolean;
+}
+

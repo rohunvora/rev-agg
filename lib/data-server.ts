@@ -327,3 +327,134 @@ export const getRevenueData = unstable_cache(
   { revalidate: REVALIDATE_SECONDS, tags: ['revenue'] }
 );
 
+/**
+ * Clean Market Data - All coins excluding stablecoins, wrapped tokens, etc.
+ */
+
+import { MarketCoin } from './types';
+
+// Tokens to EXCLUDE from clean market view
+const EXCLUDED_CATEGORIES = new Set([
+  'stablecoins',
+  'wrapped-tokens', 
+  'liquid-staking-derivatives',
+  'bridged-tokens',
+]);
+
+// Specific token IDs to exclude (stables, wrapped, LSDs, CEX tokens)
+const EXCLUDED_IDS = new Set([
+  // Stablecoins
+  'tether', 'usd-coin', 'dai', 'trueusd', 'frax', 'usdd', 'pax-dollar', 'gemini-dollar',
+  'fei-usd', 'liquity-usd', 'alchemix-usd', 'neutrino', 'usdk', 'husd', 'susd',
+  'first-digital-usd', 'paypal-usd', 'eure-stablecoin', 'celo-dollar', 'origin-dollar',
+  'euro-coin', 'tether-gold', 'pax-gold', 'usde', 'ethena-usde', 'usual-usd',
+  // Wrapped tokens
+  'wrapped-bitcoin', 'wrapped-ether', 'weth', 'wrapped-steth', 'wrapped-eeth',
+  'bitcoin-bep2', 'wrapped-beacon-eth', 'coinbase-wrapped-staked-eth',
+  // Liquid staking derivatives
+  'staked-ether', 'lido-staked-ether', 'rocket-pool-eth', 'coinbase-wrapped-staked-eth',
+  'frax-ether', 'mantle-staked-ether', 'binance-staked-eth', 'renzo-restaked-eth',
+  'staked-matic', 'marinade-staked-sol', 'jito-staked-sol', 'binance-staked-sol',
+  // CEX tokens (often manipulated volumes)
+  'leo-token', 'okb', 'kucoin-shares', 'crypto-com-chain', 'bitget-token', 
+  'mx-token', 'huobi-token', 'gate', 'bitfinex-leo',
+  // Bridged / Multichain duplicates
+  'multichain', 'anyswap', 'ren', 'synapse-2',
+  // Other noise
+  'terrausd', 'terra-luna', 'terra-luna-2', // Dead/controversial
+]);
+
+// Buyback token IDs for badge
+const BUYBACK_IDS = new Set([
+  'hyperliquid', 'pump-fun', 'ore', 'maker', 'aave', 'raydium', 'pancakeswap-token',
+  'banana-gun', 'helium', 'jupiter-exchange-solana', 'bonk', 'apex-token-2',
+  'graphite-protocol', 'ben-pasternak', 'tokenbot-2',
+]);
+
+// Category mapping based on CoinGecko categories
+function getCategory(categories: string[]): string {
+  if (!categories || categories.length === 0) return 'Other';
+  
+  const catLower = categories.map(c => c.toLowerCase());
+  
+  if (catLower.some(c => c.includes('layer-1') || c.includes('layer 1'))) return 'L1';
+  if (catLower.some(c => c.includes('layer-2') || c.includes('layer 2'))) return 'L2';
+  if (catLower.some(c => c.includes('meme'))) return 'Meme';
+  if (catLower.some(c => c.includes('defi') || c.includes('decentralized finance'))) return 'DeFi';
+  if (catLower.some(c => c.includes('gaming') || c.includes('metaverse'))) return 'Gaming';
+  if (catLower.some(c => c.includes('exchange'))) return 'Exchange';
+  if (catLower.some(c => c.includes('ai') || c.includes('artificial'))) return 'AI';
+  if (catLower.some(c => c.includes('nft'))) return 'NFT';
+  if (catLower.some(c => c.includes('oracle'))) return 'Oracle';
+  if (catLower.some(c => c.includes('storage'))) return 'Storage';
+  if (catLower.some(c => c.includes('privacy'))) return 'Privacy';
+  
+  return 'Other';
+}
+
+/**
+ * Fetch clean market data from CoinGecko
+ */
+async function fetchCleanMarketDataRaw(): Promise<MarketCoin[]> {
+  try {
+    // Fetch top 250 coins by market cap (we'll filter down)
+    const response = await fetch(
+      `${COINGECKO_API}/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=250&page=1&sparkline=false&price_change_percentage=24h,7d`,
+      { next: { revalidate: REVALIDATE_SECONDS } }
+    );
+    
+    if (!response.ok) {
+      console.error('[Server] CoinGecko market fetch failed:', response.status);
+      return [];
+    }
+    
+    const data = await response.json();
+    
+    if (!Array.isArray(data)) return [];
+    
+    // Filter and transform
+    const cleanCoins: MarketCoin[] = data
+      .filter((coin: any) => {
+        // Exclude by ID
+        if (EXCLUDED_IDS.has(coin.id)) return false;
+        // Must have market cap
+        if (!coin.market_cap || coin.market_cap < 1000000) return false;
+        return true;
+      })
+      .slice(0, 100) // Top 100 clean coins
+      .map((coin: any, index: number) => ({
+        id: coin.id,
+        symbol: coin.symbol?.toUpperCase() || '',
+        name: coin.name || '',
+        image: coin.image || '',
+        price: coin.current_price || 0,
+        marketCap: coin.market_cap || 0,
+        marketCapRank: index + 1, // Re-rank after filtering
+        volume24h: coin.total_volume || 0,
+        priceChange24h: coin.price_change_percentage_24h || 0,
+        priceChange7d: coin.price_change_percentage_7d_in_currency || 0,
+        circulatingSupply: coin.circulating_supply || 0,
+        totalSupply: coin.total_supply || null,
+        category: 'Crypto', // Default, can enhance later
+        hasBuyback: BUYBACK_IDS.has(coin.id),
+      }));
+    
+    return cleanCoins;
+  } catch (error) {
+    console.error('[Server] Failed to fetch clean market data:', error);
+    return [];
+  }
+}
+
+/**
+ * Cached function to get clean market data
+ */
+export const getCleanMarketData = unstable_cache(
+  async (): Promise<MarketCoin[]> => {
+    console.log('[Server] Fetching clean market data (cache miss or revalidation)');
+    return fetchCleanMarketDataRaw();
+  },
+  ['clean-market-data'],
+  { revalidate: REVALIDATE_SECONDS, tags: ['market'] }
+);
+
