@@ -44,13 +44,15 @@ function PctChange({ value }: { value: number }) {
 export default function MarketPage() {
   const [coins, setCoins] = useState<MarketCoin[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [sortKey, setSortKey] = useState<SortKey>('marketCapRank');
   const [sortAsc, setSortAsc] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
-  const loadData = useCallback(async () => {
+  const loadData = useCallback(async (isInitial = false) => {
+    if (!isInitial) setRefreshing(true);
     try {
-      const response = await fetch('/api/data?type=market');
+      const response = await fetch('/api/data?type=market&t=' + Date.now()); // Cache bust
       const { data } = await response.json();
       if (data && data.length > 0) {
         setCoins(data);
@@ -60,12 +62,13 @@ export default function MarketPage() {
       console.error('Error loading market data:', error);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   }, []);
 
   useEffect(() => {
-    loadData();
-    const interval = setInterval(loadData, 120000);
+    loadData(true);
+    const interval = setInterval(() => loadData(false), 30000); // Refresh every 30 seconds
     return () => clearInterval(interval);
   }, [loadData]);
 
@@ -123,11 +126,17 @@ export default function MarketPage() {
                 </span>
               </div>
             </div>
-            {lastUpdated && (
-              <span className="text-sm text-[#808a9d]">
-                Updated {lastUpdated.toLocaleTimeString()}
-              </span>
-            )}
+            <div className="flex items-center gap-3">
+              {refreshing && (
+                <span className="text-sm text-[#6188ff] animate-pulse">Updating...</span>
+              )}
+              {lastUpdated && (
+                <span className="text-sm text-[#808a9d]">
+                  Updated {lastUpdated.toLocaleTimeString()}
+                </span>
+              )}
+              <div className="w-2 h-2 rounded-full bg-[#16c784] animate-pulse" title="Live data" />
+            </div>
           </div>
         </div>
       </div>

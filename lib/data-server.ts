@@ -455,6 +455,6 @@ export const getCleanMarketData = unstable_cache(
     return fetchCleanMarketDataRaw();
   },
   ['clean-market-data'],
-  { revalidate: REVALIDATE_SECONDS, tags: ['market'] }
+  { revalidate: 30, tags: ['market'] } // 30 second cache for fresher prices
 );
 
