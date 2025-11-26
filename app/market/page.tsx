@@ -48,6 +48,7 @@ export default function MarketPage() {
   const [sortKey, setSortKey] = useState<SortKey>('marketCapRank');
   const [sortAsc, setSortAsc] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [showRealVolume, setShowRealVolume] = useState(false);
 
   const loadData = useCallback(async (isInitial = false) => {
     if (!isInitial) setRefreshing(true);
@@ -127,12 +128,23 @@ export default function MarketPage() {
                 </span>
               </div>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => setShowRealVolume(!showRealVolume)}
+                className={`text-xs px-3 py-1.5 rounded-full border transition-all ${
+                  showRealVolume 
+                    ? 'border-[#16c784] text-[#16c784] bg-[#16c784]/10' 
+                    : 'border-[#323546] text-[#808a9d] hover:border-[#808a9d]'
+                }`}
+                title="Filter volume to show only trusted exchanges (Binance, Coinbase, Kraken, etc.)"
+              >
+                {showRealVolume ? '✓ Real Volume' : 'Show Real Volume'}
+              </button>
               {refreshing && (
                 <span className="text-sm text-[#6188ff] animate-pulse">Updating...</span>
               )}
               {lastUpdated && (
-                <span className="text-sm text-[#808a9d]">
+                <span className="text-sm text-[#808a9d] hidden sm:inline">
                   Updated {lastUpdated.toLocaleTimeString()}
                 </span>
               )}
@@ -150,14 +162,23 @@ export default function MarketPage() {
               <span className="text-[#808a9d]">Total Market Cap: </span>
               <span className="text-white font-semibold">{formatLargeNumber(totalMarketCap)}</span>
             </div>
-            <div>
-              <span style={{ color: '#16c784' }}>Real 24h Vol: </span>
-              <span className="text-white font-semibold">{formatLargeNumber(totalTrustedVolume)}</span>
-            </div>
-            <div>
-              <span className="text-[#808a9d]">Reported Vol: </span>
-              <span className="text-[#808a9d]">{formatLargeNumber(totalReportedVolume)}</span>
-            </div>
+            {showRealVolume ? (
+              <>
+                <div>
+                  <span style={{ color: '#16c784' }}>Real 24h Vol: </span>
+                  <span className="text-white font-semibold">{formatLargeNumber(totalTrustedVolume)}</span>
+                </div>
+                <div>
+                  <span className="text-[#808a9d]">Reported: </span>
+                  <span className="text-[#808a9d]">{formatLargeNumber(totalReportedVolume)}</span>
+                </div>
+              </>
+            ) : (
+              <div>
+                <span className="text-[#808a9d]">24h Volume: </span>
+                <span className="text-white font-semibold">{formatLargeNumber(totalReportedVolume)}</span>
+              </div>
+            )}
             <div>
               <span className="text-[#808a9d]">Coins: </span>
               <span className="text-white font-semibold">{coins.length}</span>
@@ -184,20 +205,26 @@ export default function MarketPage() {
                 <SortableHeader label="24h %" sortKeyName="priceChange24h" />
                 <SortableHeader label="7d %" sortKeyName="priceChange7d" />
                 <SortableHeader label="Market Cap" sortKeyName="marketCap" />
-                <th 
-                  className="py-4 px-2 text-right text-xs font-medium cursor-pointer hover:text-white transition-colors whitespace-nowrap"
-                  style={{ color: '#16c784' }}
-                  onClick={() => handleSort('trustedVolume24h')}
-                  title="Volume from trusted exchanges only (Binance, Coinbase, Kraken, OKX, Bybit, etc.)"
-                >
-                  <span className="inline-flex items-center gap-1">
-                    Real Vol ✓
-                    {sortKey === 'trustedVolume24h' && (
-                      <span className="text-white">{sortAsc ? '↑' : '↓'}</span>
-                    )}
-                  </span>
-                </th>
-                <SortableHeader label="Reported Vol" sortKeyName="volume24h" />
+                {showRealVolume ? (
+                  <>
+                    <th 
+                      className="py-4 px-2 text-right text-xs font-medium cursor-pointer hover:text-white transition-colors whitespace-nowrap"
+                      style={{ color: '#16c784' }}
+                      onClick={() => handleSort('trustedVolume24h')}
+                      title="Volume from trusted exchanges only (Binance, Coinbase, Kraken, OKX, Bybit, etc.)"
+                    >
+                      <span className="inline-flex items-center gap-1">
+                        Real Vol ✓
+                        {sortKey === 'trustedVolume24h' && (
+                          <span className="text-white">{sortAsc ? '↑' : '↓'}</span>
+                        )}
+                      </span>
+                    </th>
+                    <SortableHeader label="Reported" sortKeyName="volume24h" />
+                  </>
+                ) : (
+                  <SortableHeader label="Volume(24h)" sortKeyName="volume24h" />
+                )}
                 <th className="py-4 px-2 text-right text-[#808a9d] text-xs font-medium whitespace-nowrap">Circulating Supply</th>
               </tr>
             </thead>
@@ -246,17 +273,25 @@ export default function MarketPage() {
                   <td className="py-4 px-2 text-right text-white">
                     {formatLargeNumber(coin.marketCap)}
                   </td>
-                  <td className="py-4 px-2 text-right" style={{ color: '#16c784' }}>
-                    {coin.trustedVolume24h > 0 ? formatLargeNumber(coin.trustedVolume24h) : '—'}
-                  </td>
-                  <td className="py-4 px-2 text-right">
-                    <span className={coin.trustedVolume24h > 0 && coin.volume24h > coin.trustedVolume24h * 3 ? 'text-[#ea3943]' : 'text-[#808a9d]'}>
+                  {showRealVolume ? (
+                    <>
+                      <td className="py-4 px-2 text-right" style={{ color: '#16c784' }}>
+                        {coin.trustedVolume24h > 0 ? formatLargeNumber(coin.trustedVolume24h) : '—'}
+                      </td>
+                      <td className="py-4 px-2 text-right">
+                        <span className={coin.trustedVolume24h > 0 && coin.volume24h > coin.trustedVolume24h * 3 ? 'text-[#ea3943]' : 'text-[#808a9d]'}>
+                          {formatLargeNumber(coin.volume24h)}
+                          {coin.trustedVolume24h > 0 && coin.volume24h > coin.trustedVolume24h * 3 && (
+                            <span className="ml-1" title="Reported volume is 3x+ higher than trusted exchanges - potential wash trading">⚠️</span>
+                          )}
+                        </span>
+                      </td>
+                    </>
+                  ) : (
+                    <td className="py-4 px-2 text-right text-[#808a9d]">
                       {formatLargeNumber(coin.volume24h)}
-                      {coin.trustedVolume24h > 0 && coin.volume24h > coin.trustedVolume24h * 3 && (
-                        <span className="ml-1" title="Reported volume is 3x+ higher than trusted exchanges - potential wash trading">⚠️</span>
-                      )}
-                    </span>
-                  </td>
+                    </td>
+                  )}
                   <td className="py-4 px-2 text-right text-[#808a9d] text-sm">
                     {coin.circulatingSupply > 0 ? formatSupply(coin.circulatingSupply, coin.symbol) : '—'}
                   </td>
@@ -271,12 +306,16 @@ export default function MarketPage() {
       <div className="py-8 border-t mt-8" style={{ borderColor: '#323546' }}>
         <div className="max-w-[1400px] mx-auto px-6 text-center text-sm text-[#808a9d]">
           <p>Data from CoinGecko · Excludes stablecoins, wrapped tokens, LSDs, and CEX tokens</p>
-          <p className="mt-2">
-            <span style={{ color: '#16c784' }}>Real Vol ✓</span> = Binance, Coinbase, Kraken, OKX, Bybit, Bitget, KuCoin, Gate, Bitstamp, Gemini, Upbit
-          </p>
-          <p className="mt-1">
-            <span className="text-[#ea3943]">⚠️</span> = Reported volume 3x+ higher than trusted exchanges (potential wash trading)
-          </p>
+          {showRealVolume && (
+            <>
+              <p className="mt-2">
+                <span style={{ color: '#16c784' }}>Real Vol ✓</span> = Binance, Coinbase, Kraken, OKX, Bybit, Bitget, KuCoin, Gate, Bitstamp, Gemini, Upbit
+              </p>
+              <p className="mt-1">
+                <span className="text-[#ea3943]">⚠️</span> = Reported volume 3x+ higher than trusted exchanges (potential wash trading)
+              </p>
+            </>
+          )}
           <p className="mt-3">
             <Link href="/" className="text-[#6188ff] hover:underline">
               ← Back to Buyback Tracker
