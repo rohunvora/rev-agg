@@ -1,3 +1,11 @@
+<div align="center">
+  <img src="/.github/social-preview.png" alt="rev-agg" width="800" />
+  <p><strong>Real-time leaderboard tracking crypto protocols that actually buy back their tokens from the market.</strong></p>
+  <p>
+    <a href="https://rev-agg.vercel.app"><strong>🚀 Live Demo</strong></a>
+  </p>
+</div>
+
 # Buyback Tracker
 
 **Real-time leaderboard tracking crypto protocols that actually buy back their tokens from the market.**
