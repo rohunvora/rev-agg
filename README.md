@@ -64,6 +64,38 @@ Only includes protocols that **purchase tokens from the open market**:
 
 **Excluded:** Protocols that only distribute fees to stakers (Curve, GMX, dYdX, Pendle, etc.)
 
+## Architecture
+
+```mermaid
+flowchart TB
+    subgraph APIs["📊 Data Sources"]
+        DL[DefiLlama]
+        CG[CoinGecko]
+    end
+    
+    subgraph Core["⚙️ Processing"]
+        Fetch[Fetch Revenue]
+        Calc[Calculate Metrics]
+        Verify{Verified\nBuyback?}
+    end
+    
+    subgraph UI["🖥️ Dashboard"]
+        BB[Buybacks Tab]
+        Rev[Revenue Tab]
+    end
+    
+    DL --> Fetch
+    CG --> Fetch
+    Fetch --> Calc
+    Calc --> Verify
+    Verify -->|"Yes"| BB
+    Verify -->|"No"| Rev
+    
+    style APIs fill:#030712,stroke:#facc15,color:#fff
+    style Core fill:#030712,stroke:#10b981,color:#fff
+    style UI fill:#030712,stroke:#6366f1,color:#fff
+```
+
 ## Data Sources
 
 - **DefiLlama API** — Buyback and revenue data via `dailyHoldersRevenue` endpoints
